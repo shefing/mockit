@@ -24,7 +24,7 @@ jobs:
             npm ci
           fi
       - name: Zip extension
-        run: zip -r mockitextension.zip source
+        run: zip -r mockitextension.zip . -i source
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4.5.0
