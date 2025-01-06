@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteRecordBtn = document.getElementById('deleteRecord');
     const apiPreviewDiv = document.getElementById('apiPreview');
     const statusIndicator = document.getElementById('statusIndicator');
+    const fallbackMatchingCheckbox = document.getElementById('fallbackMatching');
 
     let isRecording = false;
     let isReplaying = false;
@@ -39,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isRecording) {
             recordingNameInput.value = response.currentRecordingName || 'Unnamed Recording';
-            filterInput.value = response.currentFilter || '/api';
+            filterInput.value = response.currentFilter ? response.currentFilter.join(', ') : '/api';
         }
 
         if (isReplaying) {
@@ -71,7 +72,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const timeString = now.toTimeString().split(' ')[0].slice(0, 5);
         const dateTimeString = `${dateString} ${timeString}`;
         const name = recordingNameInput.value || `Unnamed Recording - ${dateTimeString}`;
-        const filter = filterInput.value || '/api';
+        const filter = filterInput.value.split(',').map(f => f.trim()).filter(f => f);
+        if (filter.length === 0) {
+            filter.push('/api');
+        }
         chrome.runtime.sendMessage({ action: 'startRecording', name, filter }, (response) => {
             if (chrome.runtime.lastError) {
                 console.error('Start recording error:', chrome.runtime.lastError);
@@ -107,7 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startReplaying() {
         const name = recordingSelect.value;
-        chrome.runtime.sendMessage({ action: 'startReplaying', name }, (response) => {
+        const fallbackMatching = fallbackMatchingCheckbox.checked;
+        chrome.runtime.sendMessage({ action: 'startReplaying', name, fallbackMatching }, (response) => {
             if (chrome.runtime.lastError) {
                 console.error('Start replaying error:', chrome.runtime.lastError);
                 alert('Failed to start replaying. Please check the console for errors.');
@@ -152,8 +157,9 @@ document.addEventListener('DOMContentLoaded', () => {
         exportRecordingBtn.disabled = isRecording || isReplaying;
         deleteRecordBtn.disabled = isRecording || isReplaying;
         importRecordingInput.disabled = isRecording || isReplaying;
+        fallbackMatchingCheckbox.disabled = isRecording || isReplaying;
 
-        [recordingSelect, exportRecordingBtn, deleteRecordBtn, importRecordingInput.parentElement].forEach(el => {
+        [recordingSelect, exportRecordingBtn, deleteRecordBtn, importRecordingInput.parentElement, fallbackMatchingCheckbox].forEach(el => {
             if (el.disabled) {
                 el.classList.add('disabled');
             } else {
@@ -218,23 +224,17 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.onload = (e) => {
                 try {
                     const data = JSON.parse(e.target.result);
-                    chrome.storage.local.get(null, (result) => {
-                        let newName = data.name;
-                        let counter = 1;
-                        while (result[newName]) {
-                            counter++;
-                            newName = `${data.name} (${counter})`;
+                    chrome.storage.local.set({ [data.name]: data }, () => {
+                        if (chrome.runtime.lastError) {
+                            console.error('Import recording error:', chrome.runtime.lastError);
+                            alert('Failed to import recording. Please check the console for errors.');
+                        } else {
+                            console.log('Recording imported');
+                            loadRecordings();
+                            recordingSelect.value = data.name;
+                            updateApiPreview();
+                            alert(`Recording imported successfully as "${data.name}"`);
                         }
-                        chrome.storage.local.set({ [newName]: {...data, name: newName} }, () => {
-                            if (chrome.runtime.lastError) {
-                                console.error('Import recording error:', chrome.runtime.lastError);
-                                alert('Failed to import recording. Please check the console for errors.');
-                            } else {
-                                console.log('Recording imported');
-                                loadRecordings();
-                                alert(`Recording imported successfully as "${newName}"`);
-                            }
-                        });
                     });
                 } catch (error) {
                     console.error('Import recording parse error:', error);
@@ -307,17 +307,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     const replayedRequests = result.replayedRequests || {};
                     const paths = new Set();
 
-                    // First, collect all unique paths
+                    // First, collect all unique paths with query parameters
                     for (const key in requests) {
                         const url = new URL(requests[key].url);
-                        paths.add(url.pathname);
+                        paths.add(url.pathname + url.search);
                     }
 
                     // Create the preview HTML
                     apiPreviewDiv.innerHTML = '<h4 class="font-semibold mb-1 text-xs">API Paths:</h4>' +
                         Array.from(paths)
                             .map(path => {
-                                const replayCount = (replayedRequests[path] || 0);
+                                const pathWithoutQuery = path.split('?')[0];
+                                const replayCount = (replayedRequests[pathWithoutQuery] || 0);
                                 const countDisplay = replayCount > 0 ? ` <span class="text-gray-500 text-xs">(${replayCount})</span>` : '';
                                 return `<div class="mb-1 text-xs">${path}${countDisplay}</div>`;
                             })

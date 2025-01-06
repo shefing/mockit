@@ -1,10 +1,11 @@
 let isRecording = false;
 let isReplaying = false;
 let currentRecordingName = '';
-let currentFilter = '/api';
+let currentFilter = ['/api'];
 let recordedData = {};
 let currentTabId = null;
 let replayTabId = null;
+let fallbackMatchingEnabled = false;
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('Received message:', request);
@@ -22,7 +23,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === 'stopRecording') {
         stopRecording(sendResponse);
     } else if (request.action === 'startReplaying') {
-        startReplaying(request.name, sendResponse);
+        startReplaying(request.name, request.fallbackMatching, sendResponse);
         return true;
     } else if (request.action === 'stopReplaying') {
         stopReplaying(sendResponse);
@@ -42,7 +43,7 @@ function updateState() {
 function startRecording(name, filter, sendResponse) {
     isRecording = true;
     currentRecordingName = name || 'Unnamed Recording';
-    currentFilter = filter || '/api';
+    currentFilter = filter || ['/api'];
     recordedData = {};
     updateState();
 
@@ -97,7 +98,7 @@ async function recordingListener(debuggeeId, message, params) {
 
     if (message === "Network.requestWillBeSent") {
         const url = new URL(params.request.url);
-        if (url.pathname.includes(currentFilter)) {
+        if (currentFilter.some(filter => url.pathname.includes(filter))) {
             const key = getRequestKey(params.request);
             console.log('Request will be sent:', key);
             recordedData[key] = {
@@ -186,9 +187,10 @@ function saveRecording() {
     });
 }
 
-function startReplaying(name, sendResponse) {
+function startReplaying(name, fallbackMatching, sendResponse) {
     isReplaying = true;
     currentRecordingName = name;
+    fallbackMatchingEnabled = fallbackMatching;
 
     // Reset replay counters
     chrome.storage.local.set({ replayedRequests: {} }, () => {
@@ -258,10 +260,18 @@ async function replayingListener(debuggeeId, message, params) {
 
     if (message === "Network.requestIntercepted") {
         const interceptedUrl = new URL(params.request.url);
-        const key = Object.keys(recordedData).find(k => {
+        let key = Object.keys(recordedData).find(k => {
             const recordedUrl = new URL(recordedData[k].url);
             return recordedUrl.pathname === interceptedUrl.pathname;
         });
+
+        if (!key && fallbackMatchingEnabled) {
+            // Fallback matching: find a similar path without query parameters
+            key = Object.keys(recordedData).find(k => {
+                const recordedUrl = new URL(recordedData[k].url);
+                return recordedUrl.pathname === interceptedUrl.pathname.split('?')[0];
+            });
+        }
 
         if (key) {
             console.log('Intercepted request:', key);
