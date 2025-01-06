@@ -3,6 +3,8 @@
 ## Introduction
 
 The Network Traffic Recorder and Replayer is a powerful Chrome extension designed to capture and replay network requests. It's an invaluable tool for developers, QA engineers, and anyone who needs to debug, test, or demonstrate web applications with consistent network behavior.
+![image](https://github.com/user-attachments/assets/21855769-dcd5-447e-9ec0-f5f3668d308a)
+
 
 ## Features
 
