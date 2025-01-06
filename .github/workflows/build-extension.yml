@@ -27,7 +27,7 @@ jobs:
         run: zip -r mockitextension.zip source
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4.5.0
         with:
           name: mockitextension
           path: mockitextension.zip
