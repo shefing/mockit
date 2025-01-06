@@ -25,8 +25,19 @@ jobs:
             npm ci
           fi
 
+      - name: Create extension directory
+        run: |
+          mkdir extension
+          cp src/manifest.json extension/
+          cp src/background.js extension/
+          cp src/popup.html extension/
+          cp src/popup.js extension/
+          cp src/styles.css extension/
+          cp src/icon*.png extension/
+          cp src/icon*.svg extension/
+
       - name: Zip extension
-        run: zip -r mockitextension.zip . -i src
+        run: zip -r mockitextension.zip extension
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4.5.0
