@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Network Traffic Recorder and Replayer",
+  "version": "1.0",
+  "description": "Record and replay network traffic for web applications using Chrome Debugger Protocol",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "debugger",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
+

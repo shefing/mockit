@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Traffic Recorder and Replayer</title>
+    <style>
+        body { width: 400px; padding: 15px; font-family: Arial, sans-serif; }
+        h2 { margin-top: 0; }
+        .section { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        button, select, input { margin: 5px 0; display: block; width: 100%; }
+        input[type="file"] { width: auto; }
+    </style>
+</head>
+<body>
+<h2>Network Traffic Recorder and Replayer</h2>
+
+<div class="section">
+    <h3>Recording</h3>
+    <input type="text" id="recordingName" placeholder="Recording Name">
+    <input type="text" id="filter" placeholder="Filter (e.g., /api)">
+    <button id="startRecording">Start Recording</button>
+    <button id="stopRecording" disabled>Stop Recording</button>
+</div>
+
+<div class="section">
+    <h3>Export/Import</h3>
+    <select id="recordingSelect"></select>
+    <button id="exportRecording">Export Recording</button>
+    <input type="file" id="importRecording" accept=".json">
+</div>
+
+<div class="section">
+    <h3>Replay</h3>
+    <select id="replaySelect"></select>
+    <button id="startReplaying">Start Replaying</button>
+    <button id="stopReplaying" disabled>Stop Replaying</button>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
+
