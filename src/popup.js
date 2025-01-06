@@ -1,14 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const startRecordingBtn = document.getElementById('startRecording');
-    const stopRecordingBtn = document.getElementById('stopRecording');
-    const startReplayingBtn = document.getElementById('startReplaying');
-    const stopReplayingBtn = document.getElementById('stopReplaying');
+    const recordButton = document.getElementById('recordButton');
+    const replayButton = document.getElementById('replayButton');
     const exportRecordingBtn = document.getElementById('exportRecording');
     const importRecordingInput = document.getElementById('importRecording');
     const recordingNameInput = document.getElementById('recordingName');
     const filterInput = document.getElementById('filter');
     const recordingSelect = document.getElementById('recordingSelect');
-    const replaySelect = document.getElementById('replaySelect');
+    const deleteRecordBtn = document.getElementById('deleteRecord');
+    const apiPreviewDiv = document.getElementById('apiPreview');
+    const statusIndicator = document.getElementById('statusIndicator');
+
+    let isRecording = false;
+    let isReplaying = false;
 
     // Set default filter
     filterInput.value = '/api';
@@ -29,29 +32,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Retrieve the current state from the background script
     chrome.runtime.sendMessage({ action: 'getState' }, (response) => {
-        if (response.isRecording) {
-            startRecordingBtn.disabled = true;
-            stopRecordingBtn.disabled = false;
+        isRecording = response.isRecording;
+        isReplaying = response.isReplaying;
+        updateButtonStates();
+        updateStatusIndicator();
+
+        if (isRecording) {
             recordingNameInput.value = response.currentRecordingName || 'Unnamed Recording';
             filterInput.value = response.currentFilter || '/api';
-        } else {
-            startRecordingBtn.disabled = false;
-            stopRecordingBtn.disabled = true;
         }
 
-        if (response.isReplaying) {
-            startReplayingBtn.disabled = true;
-            stopReplayingBtn.disabled = false;
-            replaySelect.value = response.currentRecordingName;
-        } else {
-            startReplayingBtn.disabled = false;
-            stopReplayingBtn.disabled = true;
+        if (isReplaying) {
+            recordingSelect.value = response.currentRecordingName;
         }
     });
 
     loadRecordings();
 
-    startRecordingBtn.addEventListener('click', () => {
+    recordButton.addEventListener('click', () => {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    });
+
+    replayButton.addEventListener('click', () => {
+        if (isReplaying) {
+            stopReplaying();
+        } else {
+            startReplaying();
+        }
+    });
+
+    function startRecording() {
         const now = new Date();
         const dateString = now.toISOString().split('T')[0];
         const timeString = now.toTimeString().split(' ')[0].slice(0, 5);
@@ -63,58 +77,117 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Start recording error:', chrome.runtime.lastError);
                 alert('Failed to start recording. Please check the console for errors.');
             } else if (response && response.success) {
-                startRecordingBtn.disabled = true;
-                stopRecordingBtn.disabled = false;
+                isRecording = true;
+                updateButtonStates();
+                updateStatusIndicator();
+                updateExtensionIcon(true);
                 alert('Recording started. The page will refresh to begin capturing network traffic.');
             } else {
                 alert('Failed to start recording: ' + (response ? response.error : 'Unknown error'));
             }
         });
-    });
+    }
 
-    stopRecordingBtn.addEventListener('click', () => {
+    function stopRecording() {
         chrome.runtime.sendMessage({ action: 'stopRecording' }, (response) => {
             if (chrome.runtime.lastError) {
                 console.error('Stop recording error:', chrome.runtime.lastError);
                 alert('Failed to stop recording. Please check the console for errors.');
             } else if (response && response.success) {
-                startRecordingBtn.disabled = false;
-                stopRecordingBtn.disabled = true;
+                isRecording = false;
+                updateButtonStates();
+                updateStatusIndicator();
+                updateExtensionIcon(false);
                 loadRecordings();
             } else {
                 alert('Failed to stop recording: ' + (response ? response.error : 'Unknown error'));
             }
         });
-    });
+    }
 
-    startReplayingBtn.addEventListener('click', () => {
-        const name = replaySelect.value;
+    function startReplaying() {
+        const name = recordingSelect.value;
         chrome.runtime.sendMessage({ action: 'startReplaying', name }, (response) => {
             if (chrome.runtime.lastError) {
                 console.error('Start replaying error:', chrome.runtime.lastError);
                 alert('Failed to start replaying. Please check the console for errors.');
             } else if (response && response.success) {
-                startReplayingBtn.disabled = true;
-                stopReplayingBtn.disabled = false;
+                isReplaying = true;
+                updateButtonStates();
+                updateStatusIndicator();
+                updateExtensionIcon(true);
             } else {
                 alert('Failed to start replaying: ' + (response ? response.error : 'Unknown error'));
             }
         });
-    });
+    }
 
-    stopReplayingBtn.addEventListener('click', () => {
+    function stopReplaying() {
         chrome.runtime.sendMessage({ action: 'stopReplaying' }, (response) => {
             if (chrome.runtime.lastError) {
                 console.error('Stop replaying error:', chrome.runtime.lastError);
                 alert('Failed to stop replaying. Please check the console for errors.');
             } else if (response && response.success) {
-                startReplayingBtn.disabled = false;
-                stopReplayingBtn.disabled = true;
+                isReplaying = false;
+                updateButtonStates();
+                updateStatusIndicator();
+                updateExtensionIcon(false);
+                console.log('Replaying stopped successfully');
             } else {
-                alert('Failed to stop replaying: ' + (response ? response.error : 'Unknown error'));
+                console.error('Unexpected response when stopping replay:', response);
+                alert('An unexpected error occurred while stopping the replay. Please check the console for details.');
             }
         });
-    });
+    }
+
+    function updateButtonStates() {
+        recordButton.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
+        recordButton.className = isRecording ? 'bg-red-500 text-white px-4 py-1 rounded text-sm' : 'bg-blue-500 text-white px-4 py-1 rounded text-sm';
+        replayButton.textContent = isReplaying ? 'Stop Replaying' : 'Replay';
+        replayButton.className = isReplaying ? 'bg-red-500 text-white px-2 py-1 rounded text-xs animate-pulse' : 'bg-blue-500 text-white px-2 py-1 rounded text-xs';
+
+        recordButton.disabled = isReplaying;
+        replayButton.disabled = isRecording;
+        recordingSelect.disabled = isRecording || isReplaying;
+        exportRecordingBtn.disabled = isRecording || isReplaying;
+        deleteRecordBtn.disabled = isRecording || isReplaying;
+        importRecordingInput.disabled = isRecording || isReplaying;
+
+        [recordingSelect, exportRecordingBtn, deleteRecordBtn, importRecordingInput.parentElement].forEach(el => {
+            if (el.disabled) {
+                el.classList.add('disabled');
+            } else {
+                el.classList.remove('disabled');
+            }
+        });
+    }
+
+    function updateStatusIndicator() {
+        if (isRecording) {
+            statusIndicator.textContent = 'Recording in progress';
+            statusIndicator.className = 'mb-2 p-1 bg-red-200 rounded text-center text-sm font-semibold';
+        } else if (isReplaying) {
+            statusIndicator.textContent = 'Replaying in progress';
+            statusIndicator.className = 'mb-2 p-1 bg-blue-200 rounded text-center text-sm font-semibold';
+        } else {
+            statusIndicator.textContent = 'Idle';
+            statusIndicator.className = 'mb-2 p-1 bg-gray-200 rounded text-center text-sm font-semibold';
+        }
+    }
+
+    function updateExtensionIcon(active) {
+        chrome.action.setIcon({
+            path: active ? {
+                "16": "icon-active-16.png",
+                "48": "icon-active-48.png",
+                "128": "icon-active-128.png"
+            } : {
+                "16": "icon-16.png",
+                "48": "icon-48.png",
+                "128": "icon-128.png"
+            }
+        });
+    }
 
     exportRecordingBtn.addEventListener('click', () => {
         const name = recordingSelect.value;
@@ -145,15 +218,23 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.onload = (e) => {
                 try {
                     const data = JSON.parse(e.target.result);
-                    chrome.storage.local.set({ [data.name]: data }, () => {
-                        if (chrome.runtime.lastError) {
-                            console.error('Import recording error:', chrome.runtime.lastError);
-                            alert('Failed to import recording. Please check the console for errors.');
-                        } else {
-                            console.log('Recording imported');
-                            loadRecordings();
-                            alert('Recording imported successfully');
+                    chrome.storage.local.get(null, (result) => {
+                        let newName = data.name;
+                        let counter = 1;
+                        while (result[newName]) {
+                            counter++;
+                            newName = `${data.name} (${counter})`;
                         }
+                        chrome.storage.local.set({ [newName]: {...data, name: newName} }, () => {
+                            if (chrome.runtime.lastError) {
+                                console.error('Import recording error:', chrome.runtime.lastError);
+                                alert('Failed to import recording. Please check the console for errors.');
+                            } else {
+                                console.log('Recording imported');
+                                loadRecordings();
+                                alert(`Recording imported successfully as "${newName}"`);
+                            }
+                        });
                     });
                 } catch (error) {
                     console.error('Import recording parse error:', error);
@@ -164,6 +245,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    deleteRecordBtn.addEventListener('click', () => {
+        const name = recordingSelect.value;
+        if (name) {
+            if (confirm(`Are you sure you want to delete the recording "${name}"?`)) {
+                chrome.storage.local.remove(name, () => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Delete recording error:', chrome.runtime.lastError);
+                        alert('Failed to delete recording. Please check the console for errors.');
+                    } else {
+                        console.log('Recording deleted');
+                        loadRecordings();
+                        alert(`Recording "${name}" deleted successfully`);
+                    }
+                });
+            }
+        } else {
+            alert('Please select a recording to delete.');
+        }
+    });
+
     function loadRecordings() {
         chrome.storage.local.get(null, (result) => {
             if (chrome.runtime.lastError) {
@@ -171,7 +272,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Failed to load recordings. Please check the console for errors.');
             } else {
                 recordingSelect.innerHTML = '';
-                replaySelect.innerHTML = '';
                 let lastUsedRecord = '';
 
                 chrome.storage.local.get('lastUsedRecord', (data) => {
@@ -179,34 +279,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     for (const key in result) {
                         if (key !== 'lastUsedRecord' && key !== 'isRecording' && key !== 'isReplaying' && key !== 'currentRecordingName' && key !== 'currentFilter') {
-                            const option1 = document.createElement('option');
-                            option1.value = key;
-                            option1.textContent = key;
-                            recordingSelect.appendChild(option1);
-
-                            const option2 = document.createElement('option');
-                            option2.value = key;
-                            option2.textContent = key;
-                            replaySelect.appendChild(option2);
+                            const option = document.createElement('option');
+                            option.value = key;
+                            option.textContent = key;
+                            recordingSelect.appendChild(option);
 
                             if (key === lastUsedRecord) {
-                                option1.selected = true;
-                                option2.selected = true;
+                                option.selected = true;
                             }
                         }
                     }
+                    updateApiPreview();
                 });
             }
         });
     }
 
-    // Update lastUsedRecord when a recording is selected
+    function updateApiPreview() {
+        const name = recordingSelect.value;
+        if (name) {
+            chrome.storage.local.get(['replayedRequests', name], (result) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Load recording error:', chrome.runtime.lastError);
+                    apiPreviewDiv.textContent = 'Error loading API preview';
+                } else if (result[name]) {
+                    const requests = result[name].requests;
+                    const replayedRequests = result.replayedRequests || {};
+                    const paths = new Set();
+
+                    // First, collect all unique paths
+                    for (const key in requests) {
+                        const url = new URL(requests[key].url);
+                        paths.add(url.pathname);
+                    }
+
+                    // Create the preview HTML
+                    apiPreviewDiv.innerHTML = '<h4 class="font-semibold mb-1 text-xs">API Paths:</h4>' +
+                        Array.from(paths)
+                            .map(path => {
+                                const replayCount = (replayedRequests[path] || 0);
+                                const countDisplay = replayCount > 0 ? ` <span class="text-gray-500 text-xs">(${replayCount})</span>` : '';
+                                return `<div class="mb-1 text-xs">${path}${countDisplay}</div>`;
+                            })
+                            .join('');
+                } else {
+                    apiPreviewDiv.textContent = 'No recording found';
+                }
+            });
+        } else {
+            apiPreviewDiv.textContent = 'No recording selected';
+        }
+    }
+
+    // Update lastUsedRecord and API preview when a recording is selected
     recordingSelect.addEventListener('change', (event) => {
         chrome.storage.local.set({ 'lastUsedRecord': event.target.value });
-    });
-
-    replaySelect.addEventListener('change', (event) => {
-        chrome.storage.local.set({ 'lastUsedRecord': event.target.value });
+        updateApiPreview();
     });
 });
 

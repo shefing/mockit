@@ -1,0 +1,27 @@
+body {
+    width: 785px;
+    height: 600px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+#apiPreview {
+    height: 270px;
+    overflow-y: auto;
+}
+
+.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+

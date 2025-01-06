@@ -1,0 +1,34 @@
+name: Build Chrome Extension
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+          fi
+      - name: Zip extension
+        run: zip -r mockitextension.zip source
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: mockitextension
+          path: mockitextension.zip
+

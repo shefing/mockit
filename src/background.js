@@ -189,40 +189,44 @@ function saveRecording() {
 function startReplaying(name, sendResponse) {
     isReplaying = true;
     currentRecordingName = name;
-    loadRecording(name);
-    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-        if (tabs[0]) {
-            replayTabId = tabs[0].id;
-            updateState();
-            chrome.debugger.attach({tabId: replayTabId}, "1.0", () => {
-                if (chrome.runtime.lastError) {
-                    console.error('Debugger attach error:', chrome.runtime.lastError);
-                    sendResponse({success: false, error: chrome.runtime.lastError.message});
-                    return;
-                }
-                chrome.debugger.sendCommand({tabId: replayTabId}, "Network.enable", {}, () => {
+
+    // Reset replay counters
+    chrome.storage.local.set({ replayedRequests: {} }, () => {
+        loadRecording(name);
+        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            if (tabs[0]) {
+                replayTabId = tabs[0].id;
+                updateState();
+                chrome.debugger.attach({tabId: replayTabId}, "1.0", () => {
                     if (chrome.runtime.lastError) {
-                        console.error('Network.enable error:', chrome.runtime.lastError);
+                        console.error('Debugger attach error:', chrome.runtime.lastError);
                         sendResponse({success: false, error: chrome.runtime.lastError.message});
                         return;
                     }
-                    chrome.debugger.onEvent.addListener(replayingListener);
-                    chrome.debugger.sendCommand({tabId: replayTabId}, "Network.setRequestInterception", {patterns: [{urlPattern: '*'}]}, () => {
+                    chrome.debugger.sendCommand({tabId: replayTabId}, "Network.enable", {}, () => {
                         if (chrome.runtime.lastError) {
-                            console.error('Set request interception error:', chrome.runtime.lastError);
+                            console.error('Network.enable error:', chrome.runtime.lastError);
                             sendResponse({success: false, error: chrome.runtime.lastError.message});
                             return;
                         }
-                        chrome.tabs.reload(replayTabId, null, () => {
-                            console.log('Page reloaded for replaying');
-                            sendResponse({success: true});
+                        chrome.debugger.onEvent.addListener(replayingListener);
+                        chrome.debugger.sendCommand({tabId: replayTabId}, "Network.setRequestInterception", {patterns: [{urlPattern: '*'}]}, () => {
+                            if (chrome.runtime.lastError) {
+                                console.error('Set request interception error:', chrome.runtime.lastError);
+                                sendResponse({success: false, error: chrome.runtime.lastError.message});
+                                return;
+                            }
+                            chrome.tabs.reload(replayTabId, null, () => {
+                                console.log('Page reloaded for replaying');
+                                sendResponse({success: true});
+                            });
                         });
                     });
                 });
-            });
-        } else {
-            sendResponse({success: false, error: 'No active tab found'});
-        }
+            } else {
+                sendResponse({success: false, error: 'No active tab found'});
+            }
+        });
     });
 }
 
@@ -277,6 +281,15 @@ async function replayingListener(debuggeeId, message, params) {
                         )))
                     }
                 );
+
+                // Update replay counter for this path
+                chrome.storage.local.get('replayedRequests', (result) => {
+                    const replayedRequests = result.replayedRequests || {};
+                    const path = interceptedUrl.pathname;
+                    replayedRequests[path] = (replayedRequests[path] || 0) + 1;
+                    chrome.storage.local.set({ replayedRequests });
+                });
+
                 console.log('Replayed response for:', key);
             } catch (e) {
                 console.error('Failed to replay response:', e);

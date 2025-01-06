@@ -1,38 +1,47 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Network Traffic Recorder and Replayer</title>
-    <style>
-        body { width: 400px; padding: 15px; font-family: Arial, sans-serif; }
-        h2 { margin-top: 0; }
-        .section { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-        button, select, input { margin: 5px 0; display: block; width: 100%; }
-        input[type="file"] { width: auto; }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
 </head>
-<body>
-<h2>Network Traffic Recorder and Replayer</h2>
+<body class="bg-gray-100 text-gray-900">
+<div class="h-full flex flex-col">
+    <div class="p-4 flex-grow overflow-auto">
+        <h2 class="text-xl font-bold mb-2">Network Traffic Recorder and Replayer</h2>
+        <div id="statusIndicator" class="mb-2 p-1 bg-gray-200 rounded text-center text-sm font-semibold"></div>
 
-<div class="section">
-    <h3>Recording</h3>
-    <input type="text" id="recordingName" placeholder="Recording Name">
-    <input type="text" id="filter" placeholder="Filter (e.g., /api)">
-    <button id="startRecording">Start Recording</button>
-    <button id="stopRecording" disabled>Stop Recording</button>
-</div>
+        <div class="mb-3">
+            <div class="grid grid-cols-1 gap-2">
+                <input type="text" id="recordingName" placeholder="Recording Name" class="p-1 text-sm border rounded">
+                <input type="text" id="filter" placeholder="Filter (e.g., /api)" class="p-1 text-sm border rounded">
+                <button id="recordButton" class="bg-blue-500 text-white px-4 py-1 rounded text-sm">Start Recording</button>
+            </div>
+        </div>
 
-<div class="section">
-    <h3>Export/Import</h3>
-    <select id="recordingSelect"></select>
-    <button id="exportRecording">Export Recording</button>
-    <input type="file" id="importRecording" accept=".json">
-</div>
+        <div class="mb-3">
+            <div class="flex items-center justify-between mb-1">
+                <h3 class="text-base font-semibold">Manage Recordings</h3>
+                <div class="flex gap-1">
+                    <button id="replayButton" class="bg-blue-500 text-white px-2 py-1 rounded text-xs">Replay</button>
+                    <button id="exportRecording" class="bg-green-500 text-white px-2 py-1 rounded text-xs">Export</button>
+                    <label for="importRecording" class="bg-purple-500 text-white px-2 py-1 rounded text-xs cursor-pointer">
+                        Import
+                        <input type="file" id="importRecording" accept=".json" class="hidden">
+                    </label>
+                    <button id="deleteRecord" class="bg-red-500 text-white px-2 py-1 rounded text-xs">Delete</button>
+                </div>
+            </div>
+            <select id="recordingSelect" class="w-full p-1 text-sm border rounded"></select>
+        </div>
 
-<div class="section">
-    <h3>Replay</h3>
-    <select id="replaySelect"></select>
-    <button id="startReplaying">Start Replaying</button>
-    <button id="stopReplaying" disabled>Stop Replaying</button>
+        <div>
+            <h3 class="text-base font-semibold mb-1">API Preview</h3>
+            <div id="apiPreview" class="bg-gray-100 p-2 rounded text-sm"></div>
+        </div>
+    </div>
 </div>
 
 <script src="popup.js"></script>
