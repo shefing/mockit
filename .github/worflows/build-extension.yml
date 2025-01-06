@@ -23,8 +23,9 @@ jobs:
           if [ -f package.json ]; then
             npm ci
           fi
+
       - name: Zip extension
-        run: zip -r mockitextension.zip . -i source
+        run: zip -r mockitextension.zip . -i src
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4.5.0
