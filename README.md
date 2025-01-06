@@ -74,7 +74,7 @@ Please ensure your code adheres to the existing style and includes appropriate t
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the Apache 2 License. See the LICENSE file for details.
 
 ## Support
 
