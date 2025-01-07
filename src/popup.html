@@ -7,45 +7,75 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="styles.css" rel="stylesheet">
 </head>
-<body class="bg-gray-100 text-gray-900">
+<body class="bg-gray-100 text-gray-900 dark:bg-black dark:text-gray-100">
 <div class="h-full flex flex-col">
     <div class="p-4 flex-grow overflow-auto">
-        <h2 class="text-xl font-bold mb-2">Network Traffic Recorder and Replayer</h2>
-        <div id="statusIndicator" class="mb-2 p-1 bg-gray-200 rounded text-center text-sm font-semibold"></div>
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Network Traffic Recorder and Replayer</h2>
+            <button id="darkModeToggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-600" title="Toggle dark mode">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                </svg>
+            </button>
+        </div>
+        <div id="statusIndicator" class="mb-2 p-1 bg-gray-200 dark:bg-gray-700 rounded text-center text-sm font-semibold"></div>
 
-        <div class="mb-3">
-            <div class="grid grid-cols-1 gap-2">
-                <input type="text" id="recordingName" placeholder="Recording Name" class="p-1 text-sm border rounded">
-                <input type="text" id="filter" placeholder="Filter (e.g., /api, /record, /kokoko)" class="p-1 text-sm border rounded">
-                <button id="recordButton" class="bg-blue-500 text-white px-4 py-1 rounded text-sm">Start Recording</button>
+        <div class="mb-4">
+            <div class="grid grid-cols-1 gap-2 mt-2">
+                <input type="text" id="recordingName" placeholder="Recording Name" class="p-1 text-sm border rounded dark:bg-gray-700" title="Enter a name for your recording">
+                <input type="text" id="filter" placeholder="Filter (e.g., /api)" class="p-1 text-sm border rounded dark:bg-gray-700" title="Enter URL patterns to filter, separated by commas">
+                <button id="recordButton" class="bg-blue-500 text-white px-4 py-1 rounded text-sm" title="Start or stop recording">Start Recording</button>
             </div>
         </div>
 
-        <div class="mb-3">
+        <div class="mb-4">
             <div class="flex items-center justify-between mb-1">
                 <h3 class="text-base font-semibold">Manage Recordings</h3>
                 <div class="flex gap-1">
-                    <button id="replayButton" class="bg-blue-500 text-white px-2 py-1 rounded text-xs">Replay</button>
-                    <button id="exportRecording" class="bg-green-500 text-white px-2 py-1 rounded text-xs">Export</button>
-                    <label for="importRecording" class="bg-purple-500 text-white px-2 py-1 rounded text-xs cursor-pointer">
+                    <button id="replayButton" class="bg-blue-500 text-white px-2 py-1 rounded text-xs" title="Start or stop replaying">Replay</button>
+                    <button id="exportRecording" class="bg-green-500 text-white px-2 py-1 rounded text-xs" title="Export selected recording">Export</button>
+                    <label for="importRecording" class="bg-purple-500 text-white px-2 py-1 rounded text-xs cursor-pointer" title="Import a recording">
                         Import
                         <input type="file" id="importRecording" accept=".json" class="hidden">
                     </label>
-                    <button id="deleteRecord" class="bg-red-500 text-white px-2 py-1 rounded text-xs">Delete</button>
+                    <button id="deleteRecord" class="bg-red-500 text-white px-2 py-1 rounded text-xs" title="Delete selected recording">Delete</button>
+                    <button id="removeAllRecordings" class="bg-red-500 text-white px-2 py-1 rounded text-xs" title="Remove all recordings">Remove All</button>
                 </div>
             </div>
-            <select id="recordingSelect" class="w-full p-1 text-sm border rounded"></select>
-            <div class="mt-2">
-                <label class="flex items-center">
-                    <input type="checkbox" id="fallbackMatching" class="mr-2">
-                    <span class="text-sm">Enable fallback matching for similar paths</span>
-                </label>
+            <div class="relative">
+                <input type="text" id="recordingSelect" list="recordingOptions" placeholder="Search or select a recording" class="w-full p-1 text-sm border rounded dark:bg-gray-700" title="Search or select a recording to replay">
+                <datalist id="recordingOptions"></datalist>
             </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="flex items-center space-x-2">
+                <input type="checkbox" id="fallbackMatching" class="form-checkbox">
+                <span>Enable fallback matching for similar paths</span>
+            </label>
         </div>
 
         <div>
             <h3 class="text-base font-semibold mb-1">API Preview</h3>
-            <div id="apiPreview" class="bg-gray-100 p-2 rounded text-sm"></div>
+            <div id="apiPreview" class="bg-gray-100 dark:bg-gray-700 p-2 rounded text-sm"></div>
+        </div>
+    </div>
+</div>
+
+<div id="apiCallModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 p-4 rounded-lg w-full max-w-4xl h-[90vh] overflow-hidden flex flex-col border dark:border-gray-600">
+        <h3 class="text-lg font-bold mb-2 dark:text-white">API Call Details</h3>
+        <details class="mb-4">
+            <summary class="cursor-pointer font-semibold dark:text-white">Request Details</summary>
+            <div id="apiCallDetails" class="mt-2"></div>
+        </details>
+        <div class="flex-grow overflow-hidden flex flex-col">
+            <strong class="dark:text-white mb-1">Response Body:</strong>
+            <textarea id="responseBody" class="flex-grow w-full text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded dark:text-white"></textarea>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button id="saveChanges" class="bg-green-500 text-white px-4 py-2 rounded mr-2">Save Changes</button>
+            <button id="closeModal" class="bg-red-500 text-white px-4 py-2 rounded">Close</button>
         </div>
     </div>
 </div>

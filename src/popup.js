@@ -6,13 +6,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const recordingNameInput = document.getElementById('recordingName');
     const filterInput = document.getElementById('filter');
     const recordingSelect = document.getElementById('recordingSelect');
+    const recordingOptions = document.getElementById('recordingOptions');
     const deleteRecordBtn = document.getElementById('deleteRecord');
+    const removeAllRecordingsBtn = document.getElementById('removeAllRecordings');
     const apiPreviewDiv = document.getElementById('apiPreview');
     const statusIndicator = document.getElementById('statusIndicator');
     const fallbackMatchingCheckbox = document.getElementById('fallbackMatching');
+    const apiCallModal = document.getElementById('apiCallModal');
+    const apiCallDetails = document.getElementById('apiCallDetails');
+    const closeModalBtn = document.getElementById('closeModal');
+    const darkModeToggle = document.getElementById('darkModeToggle');
 
     let isRecording = false;
     let isReplaying = false;
+    let allRecordings = [];
 
     // Set default filter
     filterInput.value = '/api';
@@ -63,6 +70,23 @@ document.addEventListener('DOMContentLoaded', () => {
             stopReplaying();
         } else {
             startReplaying();
+        }
+    });
+
+    removeAllRecordingsBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to remove all recordings? This action cannot be undone.')) {
+            chrome.storage.local.clear(() => {
+                if (chrome.runtime.lastError) {
+                    console.error('Clear storage error:', chrome.runtime.lastError);
+                    alert('Failed to remove all recordings. Please check the console for errors.');
+                } else {
+                    console.log('All recordings removed');
+                    loadRecordings();
+                    recordingSelect.value = '';
+                    updateButtonStates();
+                    alert('All recordings have been removed successfully.');
+                }
+            });
         }
     });
 
@@ -142,20 +166,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateButtonStates() {
+        const isRecordingSelected = recordingSelect.value !== '';
+
         recordButton.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
         recordButton.className = isRecording ? 'bg-red-500 text-white px-4 py-1 rounded text-sm' : 'bg-blue-500 text-white px-4 py-1 rounded text-sm';
         replayButton.textContent = isReplaying ? 'Stop Replaying' : 'Replay';
         replayButton.className = isReplaying ? 'bg-red-500 text-white px-2 py-1 rounded text-xs animate-pulse' : 'bg-blue-500 text-white px-2 py-1 rounded text-xs';
 
         recordButton.disabled = isReplaying;
-        replayButton.disabled = isRecording;
+        replayButton.disabled = isRecording || !isRecordingSelected;
         recordingSelect.disabled = isRecording || isReplaying;
-        exportRecordingBtn.disabled = isRecording || isReplaying;
-        deleteRecordBtn.disabled = isRecording || isReplaying;
+        exportRecordingBtn.disabled = isRecording || isReplaying || !isRecordingSelected;
+        deleteRecordBtn.disabled = isRecording || isReplaying || !isRecordingSelected;
         importRecordingInput.disabled = isRecording || isReplaying;
-        fallbackMatchingCheckbox.disabled = isRecording || isReplaying;
+        removeAllRecordingsBtn.disabled = isRecording || isReplaying;
 
-        [recordingSelect, exportRecordingBtn, deleteRecordBtn, importRecordingInput.parentElement, fallbackMatchingCheckbox].forEach(el => {
+        [recordingSelect, exportRecordingBtn, deleteRecordBtn, importRecordingInput.parentElement, removeAllRecordingsBtn, replayButton].forEach(el => {
             if (el.disabled) {
                 el.classList.add('disabled');
             } else {
@@ -167,13 +193,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateStatusIndicator() {
         if (isRecording) {
             statusIndicator.textContent = 'Recording in progress';
-            statusIndicator.className = 'mb-2 p-1 bg-red-200 rounded text-center text-sm font-semibold';
+            statusIndicator.className = 'mb-2 p-1 bg-red-200 dark:bg-red-800 rounded text-center text-sm font-semibold animate-pulse';
         } else if (isReplaying) {
             statusIndicator.textContent = 'Replaying in progress';
-            statusIndicator.className = 'mb-2 p-1 bg-blue-200 rounded text-center text-sm font-semibold';
+            statusIndicator.className = 'mb-2 p-1 bg-blue-200 dark:bg-blue-800 rounded text-center text-sm font-semibold animate-pulse';
         } else {
             statusIndicator.textContent = 'Idle';
-            statusIndicator.className = 'mb-2 p-1 bg-gray-200 rounded text-center text-sm font-semibold';
+            statusIndicator.className = 'mb-2 p-1 bg-gray-200 dark:bg-gray-700 rounded text-center text-sm font-semibold';
         }
     }
 
@@ -254,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Load recordings error:', chrome.runtime.lastError);
                 alert('Failed to load recordings. Please check the console for errors.');
             } else {
-                recordingSelect.innerHTML = '';
+                allRecordings = [];
                 let lastUsedRecord = '';
 
                 chrome.storage.local.get('lastUsedRecord', (data) => {
@@ -262,21 +288,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     for (const key in result) {
                         if (key !== 'lastUsedRecord' && key !== 'isRecording' && key !== 'isReplaying' && key !== 'currentRecordingName' && key !== 'currentFilter') {
-                            const option = document.createElement('option');
-                            option.value = key;
-                            option.textContent = key;
-                            recordingSelect.appendChild(option);
-
-                            if (key === lastUsedRecord) {
-                                option.selected = true;
-                            }
+                            allRecordings.push(key);
                         }
                     }
-                    updateApiPreview();
+
+                    updateRecordingOptions(lastUsedRecord);
                 });
             }
         });
     }
+
+    function updateRecordingOptions(lastUsedRecord = '') {
+        recordingOptions.innerHTML = '';
+        allRecordings.forEach(recording => {
+            const option = document.createElement('option');
+            option.value = recording;
+            option.textContent = recording;
+            recordingOptions.appendChild(option);
+        });
+
+        if (lastUsedRecord && allRecordings.includes(lastUsedRecord)) {
+            recordingSelect.value = lastUsedRecord;
+        } else if (allRecordings.length > 0) {
+            recordingSelect.value = allRecordings[0];
+        }
+
+        updateApiPreview();
+    }
+
+    recordingSelect.addEventListener('input', () => {
+        updateApiPreview();
+        chrome.storage.local.set({ 'lastUsedRecord': recordingSelect.value });
+    });
 
     function updateApiPreview() {
         const name = recordingSelect.value;
@@ -303,9 +346,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const pathWithoutQuery = path.split('?')[0];
                                 const replayCount = (replayedRequests[pathWithoutQuery] || 0);
                                 const countDisplay = replayCount > 0 ? ` <span class="text-gray-500 text-xs">(${replayCount})</span>` : '';
-                                return `<div class="mb-1 text-xs">${path}${countDisplay}</div>`;
+                                return `<div class="mb-1 text-xs cursor-pointer hover:text-blue-500" data-path="${path}">${path}${countDisplay}</div>`;
                             })
                             .join('');
+
+                    // Add click event listeners to API paths
+                    apiPreviewDiv.querySelectorAll('[data-path]').forEach(el => {
+                        el.addEventListener('click', () => showApiCallDetails(name, el.getAttribute('data-path')));
+                    });
                 } else {
                     apiPreviewDiv.textContent = 'No recording found';
                 }
@@ -315,10 +363,136 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Update lastUsedRecord and API preview when a recording is selected
-    recordingSelect.addEventListener('change', (event) => {
-        chrome.storage.local.set({ 'lastUsedRecord': event.target.value });
-        updateApiPreview();
+    function showApiCallDetails(recordingName, path) {
+        chrome.storage.local.get(recordingName, (result) => {
+            if (chrome.runtime.lastError) {
+                console.error('Load API call details error:', chrome.runtime.lastError);
+                alert('Failed to load API call details. Please check the console for errors.');
+            } else if (result[recordingName]) {
+                const requests = result[recordingName].requests;
+                const matchingRequest = Object.values(requests).find(req => {
+                    const url = new URL(req.url);
+                    return url.pathname + url.search === path;
+                });
+
+                console.log('Matching request:', matchingRequest);
+
+                if (matchingRequest) {
+                    console.log('Response:', matchingRequest.response);
+                    console.log('Response type:', typeof matchingRequest.response);
+
+                    let responseBody = '';
+                    if (typeof matchingRequest.responseBody === 'string') {
+                        try {
+                            responseBody = JSON.stringify(JSON.parse(matchingRequest.responseBody), null, 2);
+                        } catch (e) {
+                            responseBody = matchingRequest.responseBody;
+                        }
+                    } else if (typeof matchingRequest.responseBody === 'object') {
+                        responseBody = JSON.stringify(matchingRequest.responseBody, null, 2);
+                    } else {
+                        responseBody = String(matchingRequest.responseBody);
+                    }
+
+                    apiCallDetails.innerHTML = `
+            <div class="mb-2">
+              <strong class="dark:text-gray-300">URL:</strong> <span class="dark:text-gray-400">${matchingRequest.url}</span>
+            </div>
+            <div class="mb-2">
+              <strong class="dark:text-gray-300">Method:</strong> <span class="dark:text-gray-400">${matchingRequest.method}</span>
+            </div>
+            <div class="mb-2">
+              <strong class="dark:text-gray-300">Status:</strong> <span class="dark:text-gray-400">${matchingRequest.status}</span>
+            </div>
+            <div class="mb-2">
+              <strong class="dark:text-gray-300">Response Headers:</strong>
+              <pre class="text-xs bg-gray-100 dark:bg-gray-600 p-2 rounded mt-1 dark:text-gray-300">${JSON.stringify(matchingRequest.responseHeaders, null, 2)}</pre>
+            </div>
+          `;
+
+                    const responseBodyTextarea = document.getElementById('responseBody');
+                    responseBodyTextarea.value = responseBody;
+
+                    // Adjust textarea height
+                    responseBodyTextarea.style.height = 'auto';
+                    responseBodyTextarea.style.height = `${responseBodyTextarea.scrollHeight}px`;
+
+                    const saveChangesBtn = document.getElementById('saveChanges');
+                    const requestKey = Object.keys(requests).find(key => requests[key] === matchingRequest);
+                    saveChangesBtn.addEventListener('click', () => saveApiCallChanges(recordingName, requestKey));
+
+                    apiCallModal.classList.remove('hidden');
+                } else {
+                    alert('No matching API call found for the selected path.');
+                }
+            } else {
+                alert('No recording found with the name: ' + recordingName);
+            }
+        });
+    }
+
+    function saveApiCallChanges(recordingName, requestKey) {
+        const updatedResponse = document.getElementById('responseBody').value;
+
+        chrome.storage.local.get(recordingName, (result) => {
+            if (chrome.runtime.lastError) {
+                console.error('Load recording error:', chrome.runtime.lastError);
+                alert('Failed to load recording. Please check the console for errors.');
+            } else if (result[recordingName]) {
+                const updatedRecording = result[recordingName];
+                if (!updatedRecording.requests[requestKey]) {
+                    console.error('Request not found:', requestKey);
+                    alert('Failed to save changes. The specified request was not found.');
+                    return;
+                }
+                try {
+                    // Try to parse the updated response as JSON
+                    const parsedResponse = JSON.stringify(JSON.parse(updatedResponse));
+                    updatedRecording.requests[requestKey].responseBody = parsedResponse;
+                } catch (error) {
+                    // If parsing fails, store it as a string
+                    console.warn('Failed to parse updated response as JSON. Storing as string:', error);
+                    updatedRecording.requests[requestKey].responseBody = updatedResponse;
+                }
+
+                chrome.storage.local.set({ [recordingName]: updatedRecording }, () => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Save changes error:', chrome.runtime.lastError);
+                        alert('Failed to save changes. Please check the console for errors.');
+                    } else {
+                        alert('Changes saved successfully.');
+                        apiCallModal.classList.add('hidden');
+                        updateApiPreview();
+                    }
+                });
+            } else {
+                alert('No recording found with the name: ' + recordingName);
+            }
+        });
+    }
+
+    closeModalBtn.addEventListener('click', () => {
+        apiCallModal.classList.add('hidden');
     });
+
+    // Close modal when clicking outside
+    apiCallModal.addEventListener('click', (e) => {
+        if (e.target === apiCallModal) {
+            apiCallModal.classList.add('hidden');
+        }
+    });
+
+    // Dark mode toggle
+    darkModeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark');
+        document.getElementById('apiCallModal').classList.toggle('dark');
+        localStorage.setItem('darkMode', document.body.classList.contains('dark') ? 'enabled' : 'disabled');
+    });
+
+    // Initialize dark mode
+    if (localStorage.getItem('darkMode') === 'enabled') {
+        document.body.classList.add('dark');
+        document.getElementById('apiCallModal').classList.add('dark');
+    }
 });
 

@@ -7,7 +7,7 @@ body {
 }
 
 #apiPreview {
-    height: 270px;
+    height: 220px;
     overflow-y: auto;
 }
 
@@ -23,5 +23,162 @@ body {
 
 .animate-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Bright theme styles */
+body {
+    background-color: #ffffff;
+    color: #333333;
+}
+
+input,
+textarea,
+select {
+    background-color: #f3f4f6;
+    color: #333333;
+    border-color: #d1d5db;
+}
+
+button {
+    background-color: #3b82f6;
+}
+
+button:hover {
+    background-color: #2563eb;
+}
+
+#apiPreview {
+    background-color: #f3f4f6;
+}
+
+/* Dark mode styles */
+body.dark {
+    background-color: #000000;
+    color: #e2e8f0;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+    background-color: #1a1a1a;
+    color: #e2e8f0;
+    border-color: #4a5568;
+}
+
+.dark button {
+    background-color: #4a5568;
+}
+
+.dark button:hover {
+    background-color: #718096;
+}
+
+.dark #apiPreview {
+    background-color: #1a1a1a;
+}
+
+.dark .bg-gray-100 {
+    background-color: #1a1a1a;
+}
+
+.dark .text-gray-900 {
+    color: #e2e8f0;
+}
+
+.p-4 {
+    height: calc(100% - 2rem);
+    overflow-y: auto;
+}
+
+/* API Call Modal Styles */
+#apiCallModal .bg-white {
+    background-color: #ffffff;
+}
+
+#apiCallModal.dark .bg-white,
+#apiCallModal.dark .dark\:bg-gray-800 {
+    background-color: #1a1a1a;
+}
+
+#apiCallModal .text-gray-900 {
+    color: #1a202c;
+}
+
+#apiCallModal.dark .text-gray-900 {
+    color: #e2e8f0;
+}
+
+#apiCallModal .bg-gray-100 {
+    background-color: #f3f4f6;
+}
+
+#apiCallModal.dark .bg-gray-100,
+#apiCallModal.dark .dark\:bg-gray-700 {
+    background-color: #2a2a2a;
+}
+
+#apiCallModal textarea {
+    font-family: monospace;
+    resize: none;
+}
+
+#apiCallModal.dark textarea {
+    color: #e2e8f0;
+    background-color: #2a2a2a;
+}
+
+#apiCallModal button {
+    transition: background-color 0.3s;
+}
+
+#apiCallModal button:hover {
+    opacity: 0.9;
+}
+
+#apiCallModal details summary::-webkit-details-marker {
+    display: none;
+}
+
+#apiCallModal details summary::before {
+    content: '▶';
+    display: inline-block;
+    width: 20px;
+    transition: transform 0.3s;
+}
+
+#apiCallModal details[open] summary::before {
+    transform: rotate(90deg);
+}
+
+#apiCallModal.dark .dark\:text-gray-300 {
+    color: #d1d5db;
+}
+
+#apiCallModal.dark .dark\:text-gray-400 {
+    color: #9ca3af;
+}
+
+#apiCallModal.dark .dark\:bg-gray-600 {
+    background-color: #2a2a2a;
+}
+
+#apiCallModal.dark .dark\:bg-gray-700 {
+    background-color: #2a2a2a;
+}
+
+#apiCallModal.dark .dark\:bg-gray-800 {
+    background-color: #1a1a1a;
+}
+
+#apiCallModal.dark .dark\:text-white {
+    color: #ffffff;
+}
+
+#apiCallModal.dark .dark\:border-gray-600 {
+    border-color: #4a5568;
+}
+
+.dark div#statusIndicator {
+    background-color: #4a5568;
 }
 
