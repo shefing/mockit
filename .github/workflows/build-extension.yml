@@ -33,8 +33,9 @@ jobs:
           cp src/popup.html extension/
           cp src/popup.js extension/
           cp src/styles.css extension/
-          cp src/icon*.png extension/
-          cp src/icon*.svg extension/
+          mkdir extension/icons
+          cp src/icons/icon*.png extension/icons
+          cp src/icons/icon*.svg extension/icons
 
       - name: Zip extension
         run: zip -r mockitextension.zip extension
