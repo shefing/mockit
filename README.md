@@ -13,6 +13,10 @@ The Network Traffic Recorder and Replayer is a powerful Chrome extension designe
 - Export and import recordings
 - Fallback matching for flexible request replaying
 - Visual indication of recording/replaying status
+- Edit API responses directly in the extension
+- Dark mode for comfortable viewing in different environments
+- API preview with replay counts for each endpoint
+- Manage multiple recordings with an improved user interface
 
 ## Installation
 
@@ -49,16 +53,26 @@ The Network Traffic Recorder and Replayer is a powerful Chrome extension designe
 - **Export**: Select a recording and click the "Export" button to save it as a JSON file.
 - **Import**: Click the "Import" button and select a previously exported JSON file to add it to your recordings.
 - **Delete**: Select a recording and click the "Delete" button to remove it from the extension.
+- **Remove All**: Click the "Remove All" button to delete all recordings (with confirmation).
 
-### API Preview
+### API Preview and Editing
 
-The extension provides an API preview that shows all captured API paths for the selected recording. It also displays the number of times each path has been replayed in the current session.
+- The extension provides an API preview that shows all captured API paths for the selected recording.
+- It displays the number of times each path has been replayed in the current session.
+- Click on an API path to view and edit its details, including the response body.
+- Make changes to the response body and click "Save Changes" to update the recording.
+
+### Dark Mode
+
+- Toggle dark mode by clicking the moon icon in the top right corner of the extension popup.
+- Dark mode provides a more comfortable viewing experience in low-light environments.
 
 ## Troubleshooting
 
 - If the extension isn't working, make sure it has the necessary permissions to access the websites you're trying to record or replay.
 - Check the browser console for any error messages related to the extension.
 - If you encounter issues with specific websites, try disabling other extensions that might interfere with network requests.
+- If editing an API response fails, ensure that the response body is valid JSON (if applicable).
 
 ## Contributing
 
