@@ -38,6 +38,26 @@ function updateState() {
         currentFilter,
         replayTabId
     });
+    updateExtensionIcon();
+}
+
+function updateExtensionIcon() {
+    let iconPath;
+    if (isRecording) {
+        iconPath = "/icons/icon-recording-48.png";
+    } else if (isReplaying) {
+        iconPath = "/icons/icon-replaying-48.png";
+    } else {
+        iconPath = "/icons/icon-48.png";
+    }
+
+    chrome.action.setIcon({ path: iconPath }, () => {
+        if (chrome.runtime.lastError) {
+            console.error('Error updating icon:', chrome.runtime.lastError);
+        } else {
+            console.log('Icon updated successfully');
+        }
+    });
 }
 
 function startRecording(name, filter, sendResponse) {

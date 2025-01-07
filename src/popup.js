@@ -84,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 isRecording = true;
                 updateButtonStates();
                 updateStatusIndicator();
-                updateExtensionIcon(true);
                 alert('Recording started. The page will refresh to begin capturing network traffic.');
             } else {
                 alert('Failed to start recording: ' + (response ? response.error : 'Unknown error'));
@@ -101,7 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 isRecording = false;
                 updateButtonStates();
                 updateStatusIndicator();
-                updateExtensionIcon(false);
                 loadRecordings();
             } else {
                 alert('Failed to stop recording: ' + (response ? response.error : 'Unknown error'));
@@ -120,7 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 isReplaying = true;
                 updateButtonStates();
                 updateStatusIndicator();
-                updateExtensionIcon(true);
             } else {
                 alert('Failed to start replaying: ' + (response ? response.error : 'Unknown error'));
             }
@@ -136,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 isReplaying = false;
                 updateButtonStates();
                 updateStatusIndicator();
-                updateExtensionIcon(false);
                 console.log('Replaying stopped successfully');
             } else {
                 console.error('Unexpected response when stopping replay:', response);
@@ -181,20 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function updateExtensionIcon(active) {
-        chrome.action.setIcon({
-            path: active ? {
-                "16": "icon-active-16.png",
-                "48": "icon-active-48.png",
-                "128": "icon-active-128.png"
-            } : {
-                "16": "icon-16.png",
-                "48": "icon-48.png",
-                "128": "icon-128.png"
-            }
-        });
-    }
-
     exportRecordingBtn.addEventListener('click', () => {
         const name = recordingSelect.value;
         chrome.storage.local.get(name, (result) => {
@@ -233,6 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             loadRecordings();
                             recordingSelect.value = data.name;
                             updateApiPreview();
+                            chrome.storage.local.set({ 'lastUsedRecord': data.name });
                             alert(`Recording imported successfully as "${data.name}"`);
                         }
                     });

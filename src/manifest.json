@@ -13,27 +13,27 @@
     "<all_urls>"
   ],
   "icons": {
-    "16": "icon-16.png",
-    "48": "icon-48.png",
-    "128": "icon-128.png"
-  },
-  "background": {
-    "service_worker": "background.js"
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
   },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "icon-16.png",
-      "48": "icon-48.png",
-      "128": "icon-128.png"
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
     }
+  },
+  "background": {
+    "service_worker": "background.js"
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://cdn.jsdelivr.net;"
   },
   "web_accessible_resources": [
     {
-      "resources": ["styles.css"],
+      "resources": ["styles.css", "icons/icon-16.png", "icons/icon-48.png", "icons/icon-128.png", "icons/icon-recording-16.png", "icons/icon-recording-48.png", "icons/icon-recording-128.png", "icons/icon-replaying-16.png", "icons/icon-replaying-48.png", "icons/icon-replaying-128.png"],
       "matches": ["<all_urls>"]
     }
   ]
