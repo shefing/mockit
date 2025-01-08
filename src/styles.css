@@ -182,3 +182,99 @@ body.dark {
     background-color: #4a5568;
 }
 
+/* Dark mode button styles */
+.dark button.bg-blue-500,
+.dark button.bg-green-500,
+.dark button.bg-red-500,
+.dark button.bg-purple-500 {
+    color: #ffffff;
+}
+
+.dark button.bg-blue-500 {
+    background-color: #3b82f6;
+}
+
+.dark button.bg-green-500 {
+    background-color: #10b981;
+}
+
+.dark button.bg-red-500 {
+    background-color: #ef4444;
+}
+
+.dark button.bg-purple-500 {
+    background-color: #8b5cf6;
+}
+
+.dark button.bg-blue-500:hover,
+.dark button.bg-green-500:hover,
+.dark button.bg-red-500:hover,
+.dark button.bg-purple-500:hover {
+    opacity: 0.8;
+}
+
+/* Custom select styles */
+.custom-select {
+    position: relative;
+    width: 100%;
+}
+
+.custom-select select {
+    display: none;
+}
+
+.select-selected {
+    background-color: #f3f4f6;
+    color: #333333;
+    padding: 8px 16px;
+    border: 1px solid #d1d5db;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 0.25rem;
+}
+
+.dark .select-selected {
+    background-color: #1a1a1a;
+    color: #e2e8f0;
+    border-color: #4a5568;
+}
+
+.select-items {
+    position: absolute;
+    background-color: #f3f4f6;
+    color: #333333;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 99;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #d1d5db;
+    border-top: none;
+    border-radius: 0 0 0.25rem 0.25rem;
+}
+
+.dark .select-items {
+    background-color: #1a1a1a;
+    color: #e2e8f0;
+    border-color: #4a5568;
+}
+
+.select-hide {
+    display: none;
+}
+
+.select-items div {
+    padding: 8px 16px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.select-items div:hover {
+    background-color: #e5e7eb;
+}
+
+.dark .select-items div:hover {
+    background-color: #2d3748;
+}
+

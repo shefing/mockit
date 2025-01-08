@@ -299,14 +299,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateRecordingOptions(lastUsedRecord = '') {
-        recordingOptions.innerHTML = '';
+        const selectItems = document.querySelector('.select-items');
+        selectItems.innerHTML = '';
         allRecordings.forEach(recording => {
-            const option = document.createElement('option');
-            option.value = recording;
-            option.textContent = recording;
-            recordingOptions.appendChild(option);
+            const div = document.createElement('div');
+            div.textContent = recording;
+            div.addEventListener('click', function() {
+                document.getElementById('recordingSelect').value = this.textContent;
+                selectItems.classList.add('select-hide');
+                updateApiPreview();
+                chrome.storage.local.set({ 'lastUsedRecord': this.textContent });
+            });
+            selectItems.appendChild(div);
         });
 
+        const recordingSelect = document.getElementById('recordingSelect');
         if (lastUsedRecord && allRecordings.includes(lastUsedRecord)) {
             recordingSelect.value = lastUsedRecord;
         } else if (allRecordings.length > 0) {
@@ -314,6 +321,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         updateApiPreview();
+    }
+
+    function initCustomSelect() {
+        const selectElement = document.getElementById('recordingSelect');
+        const selectItems = document.querySelector('.select-items');
+
+        selectElement.addEventListener('input', function() {
+            const filter = this.value.toUpperCase();
+            const options = selectItems.getElementsByTagName('div');
+            for (let i = 0; i < options.length; i++) {
+                const txtValue = options[i].textContent || options[i].innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    options[i].style.display = '';
+                } else {
+                    options[i].style.display = 'none';
+                }
+            }
+            selectItems.classList.remove('select-hide');
+        });
+
+        selectElement.addEventListener('focus', function() {
+            selectItems.classList.remove('select-hide');
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!selectElement.contains(e.target) && !selectItems.contains(e.target)) {
+                selectItems.classList.add('select-hide');
+            }
+        });
     }
 
     recordingSelect.addEventListener('input', () => {
@@ -494,5 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('dark');
         document.getElementById('apiCallModal').classList.add('dark');
     }
+
+    initCustomSelect();
 });
 

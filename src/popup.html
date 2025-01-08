@@ -43,8 +43,10 @@
                 </div>
             </div>
             <div class="relative">
-                <input type="text" id="recordingSelect" list="recordingOptions" placeholder="Search or select a recording" class="w-full p-1 text-sm border rounded dark:bg-gray-700" title="Search or select a recording to replay">
-                <datalist id="recordingOptions"></datalist>
+                <div class="custom-select relative">
+                    <input type="text" id="recordingSelect" placeholder="Search or select a recording" class="w-full p-1 text-sm border rounded dark:bg-gray-700" title="Search or select a recording to replay">
+                    <div class="select-items select-hide"></div>
+                </div>
             </div>
         </div>
 
