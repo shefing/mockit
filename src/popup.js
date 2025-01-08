@@ -133,6 +133,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startReplaying() {
         const name = recordingSelect.value;
+        if (!name) {
+            alert('Please select a recording to replay.');
+            return;
+        }
         const fallbackMatching = fallbackMatchingCheckbox.checked;
         chrome.runtime.sendMessage({ action: 'startReplaying', name, fallbackMatching }, (response) => {
             if (chrome.runtime.lastError) {
@@ -176,8 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
         recordButton.disabled = isReplaying;
         replayButton.disabled = isRecording || !isRecordingSelected;
         recordingSelect.disabled = isRecording || isReplaying;
-        exportRecordingBtn.disabled = isRecording || isReplaying || !isRecordingSelected;
-        deleteRecordBtn.disabled = isRecording || isReplaying || !isRecordingSelected;
+        exportRecordingBtn.disabled = !isRecordingSelected || isRecording || isReplaying;
+        deleteRecordBtn.disabled = !isRecordingSelected || isRecording || isReplaying;
         importRecordingInput.disabled = isRecording || isReplaying;
         removeAllRecordingsBtn.disabled = isRecording || isReplaying;
 
@@ -189,6 +193,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    recordingSelect.addEventListener('input', () => {
+        updateButtonStates();
+        updateApiPreview();
+        chrome.storage.local.set({ 'lastUsedRecord': recordingSelect.value });
+    });
 
     function updateStatusIndicator() {
         if (isRecording) {
@@ -293,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     updateRecordingOptions(lastUsedRecord);
+                    updateButtonStates();
                 });
             }
         });
