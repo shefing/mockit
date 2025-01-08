@@ -7,6 +7,8 @@ let currentTabId = null;
 let replayTabId = null;
 let fallbackMatchingEnabled = false;
 
+const pendingRequests = new Map();
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('Received message:', request);
 
@@ -22,11 +24,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     } else if (request.action === 'stopRecording') {
         stopRecording(sendResponse);
+        return true;
     } else if (request.action === 'startReplaying') {
         startReplaying(request.name, request.fallbackMatching, sendResponse);
         return true;
     } else if (request.action === 'stopReplaying') {
         stopReplaying(sendResponse);
+    } else if (request.action === 'popupOpened') {
+        chrome.storage.local.get(['recordings', 'lastUsedRecord'], (result) => {
+            sendResponse({
+                recordings: result.recordings || [],
+                lastUsedRecord: result.lastUsedRecord || ''
+            });
+        });
+        return true; // Indicates that the response is sent asynchronously
     }
 });
 
@@ -51,64 +62,91 @@ function updateExtensionIcon() {
         iconPath = "/icons/icon-48.png";
     }
 
-    chrome.action.setIcon({ path: iconPath }, () => {
-        if (chrome.runtime.lastError) {
-            console.error('Error updating icon:', chrome.runtime.lastError);
-        } else {
-            console.log('Icon updated successfully');
-        }
-    });
+    chrome.action.setIcon({ path: iconPath });
 }
 
-function startRecording(name, filter, sendResponse) {
+async function startRecording(name, filter, sendResponse) {
     isRecording = true;
     currentRecordingName = name || 'Unnamed Recording';
     currentFilter = filter || ['/api'];
-    recordedData = {};
+    recordedData = {requests:{},metadata:{}};
     updateState();
 
-    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+    try {
+        const tabs = await chrome.tabs.query({active: true, currentWindow: true});
         if (tabs[0]) {
             currentTabId = tabs[0].id;
-            chrome.debugger.attach({tabId: currentTabId}, "1.0", () => {
-                if (chrome.runtime.lastError) {
-                    console.error('Debugger attach error:', chrome.runtime.lastError);
-                    sendResponse({success: false, error: chrome.runtime.lastError.message});
-                    return;
-                }
-                chrome.debugger.sendCommand({tabId: currentTabId}, "Network.enable", {}, () => {
-                    if (chrome.runtime.lastError) {
-                        console.error('Network.enable error:', chrome.runtime.lastError);
-                        sendResponse({success: false, error: chrome.runtime.lastError.message});
-                        return;
-                    }
-                    chrome.debugger.onEvent.addListener(recordingListener);
-                    chrome.tabs.reload(currentTabId, null, () => {
-                        console.log('Page reloaded for recording');
-                        sendResponse({success: true});
-                    });
-                });
+            await chrome.debugger.attach({tabId: currentTabId}, "1.0");
+            await chrome.debugger.sendCommand({tabId: currentTabId}, "Network.enable");
+            await chrome.debugger.sendCommand({tabId: currentTabId}, "Fetch.enable", {
+                patterns: [{ urlPattern: "*", requestStage: "Response" }]
             });
+
+                    chrome.debugger.onEvent.addListener(recordingListener);
+                    await chrome.tabs.reload(currentTabId);
+                    console.log('Page reloaded for recording');
+                     sendResponse({success: true});
         } else {
             sendResponse({success: false, error: 'No active tab found'});
         }
-    });
+    } catch (err) {
+        console.error('Error starting recording:', err);
+        sendResponse({success: false, error: err.message});
+    }
 }
 
-function stopRecording(sendResponse) {
+async function stopRecording(sendResponse) {
     isRecording = false;
     updateState();
+
+    console.log(`Attempting to fetch ${pendingRequests.size} pending requests...`);
+
+    try {
+        await fetchPendingRequests();
+        console.log('All pending requests processed');
+    } catch (err) {
+        console.error('Error processing pending requests:', err);
+    }
+
     if (currentTabId) {
-        chrome.debugger.detach({tabId: currentTabId}, () => {
-            if (chrome.runtime.lastError) {
-                console.error('Debugger detach error:', chrome.runtime.lastError);
-            }
-        });
+        try {
+            await chrome.debugger.detach({tabId: currentTabId});
+        } catch (err) {
+            console.error('Debugger detach error:', err);
+        }
         chrome.debugger.onEvent.removeListener(recordingListener);
         currentTabId = null;
     }
     saveRecording();
-    sendResponse({success: true});
+    sendResponse({success: true, message: 'Recording stopped and data saved'});
+}
+
+async function fetchPendingRequests() {
+    const fetchPromises = Array.from(pendingRequests.values()).map(async (request) => {
+        try {
+            const response = await chrome.debugger.sendCommand(
+                {tabId: currentTabId},
+                "Fetch.getResponseBody",
+                {requestId: request.requestId}
+            );
+
+            request.responseBody = response.base64Encoded ?
+                atob(response.body) : response.body;
+
+            recordedData.requests[getRequestKey(request)] = request;
+            recordedData.metadata.responsesWithBody++;
+            console.log(`Response body fetched for ${request.requestId}`);
+        } catch (err) {
+            console.warn(`Failed to fetch response body for ${request.requestId}:`, err);
+            request.responseBody = '';
+            request.error = 'Failed to fetch response body';
+            recordedData.requests[getRequestKey(request)] = request;
+        } finally {
+            pendingRequests.delete(request.requestId);
+        }
+    });
+
+    await Promise.all(fetchPromises);
 }
 
 async function recordingListener(debuggeeId, message, params) {
@@ -116,80 +154,103 @@ async function recordingListener(debuggeeId, message, params) {
 
     console.log('Recording event:', message, params);
 
-    if (message === "Network.requestWillBeSent") {
-        const url = new URL(params.request.url);
-        if (currentFilter.some(filter => url.pathname.includes(filter))) {
-            const key = getRequestKey(params.request);
-            console.log('Request will be sent:', key);
-            recordedData[key] = {
-                url: params.request.url,
-                method: params.request.method,
-                requestHeaders: params.request.headers,
-                requestId: params.requestId,
-                timeStamp: params.timestamp
-            };
-
-            if (params.request.hasPostData) {
-                try {
-                    const postData = await chrome.debugger.sendCommand(
-                        {tabId: debuggeeId.tabId},
-                        "Network.getRequestPostData",
-                        {requestId: params.requestId}
-                    );
-
-                    if (postData && postData.postData) {
-                        recordedData[key].requestBody = postData.postData;
-                        console.log('Post data captured for:', key);
-                    }
-                } catch (e) {
-                    console.warn("Failed to get post data:", e);
-                }
-            }
+    try {
+        switch (message) {
+            case "Network.requestWillBeSent":
+                handleRequestWillBeSent(params);
+                break;
+            case "Network.responseReceived":
+                handleResponseReceived(params);
+                break;
+            case "Fetch.requestPaused":
+                await handleRequestPaused(debuggeeId.tabId, params);
+                break;
+            case "Network.loadingFinished":
+                handleLoadingFinished(params);
+                break;
+            case "Network.loadingFailed":
+                handleLoadingFailed(params);
+                break;
         }
-    } else if (message === "Network.responseReceived") {
-        const key = Object.keys(recordedData).find(k => recordedData[k].requestId === params.requestId);
-        if (key) {
-            console.log('Response received:', key);
-            recordedData[key].responseHeaders = params.response.headers;
-            recordedData[key].status = params.response.status;
-
-            try {
-                const response = await chrome.debugger.sendCommand(
-                    {tabId: debuggeeId.tabId},
-                    "Network.getResponseBody",
-                    {requestId: params.requestId}
-                );
-
-                if (response) {
-                    recordedData[key].responseBody = response.base64Encoded ?
-                        atob(response.body) :
-                        response.body;
-
-                    console.log(`Response body saved for ${key}, size: ${recordedData[key].responseBody.length}`);
-                }
-            } catch (e) {
-                console.warn(`Failed to get response body for ${recordedData[key].url}:`, e);
-            }
-        }
+    } catch (err) {
+        console.error('Error in recording listener:', err);
     }
 }
 
-function getRequestKey(request) {
-    const url = new URL(request.url);
-    const relativePath = url.pathname + url.search;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    if (request.method === 'GET') {
-        return `GET_${relativePath}_${timestamp}`;
-    } else {
-        return `${request.method}_${relativePath}_${JSON.stringify(request.postData || {})}_${timestamp}`;
+function handleRequestWillBeSent(params) {
+    const url = new URL(params.request.url);
+    if (currentFilter.some(filter => url.pathname.includes(filter))) {
+        pendingRequests.set(params.requestId, {
+                requestId: params.requestId,
+            url: params.request.url,
+            method: params.request.method,
+            requestHeaders: params.request.headers,
+            timestamp: new Date(params.timestamp * 1000).toISOString()
+    });
+        recordedData.metadata.totalRequests++;
+        console.log('Request tracked:', params.requestId);
     }
+}
+
+function handleResponseReceived(params) {
+    const request = pendingRequests.get(params.requestId);
+    if (request) {
+        request.responseHeaders = params.response.headers;
+        request.status = params.response.status;
+        request.statusText = params.response.statusText;
+        console.log('Response received for:', params.requestId);
+    }
+}
+
+async function handleRequestPaused(tabId, params) {
+    const request = pendingRequests.get(params.networkId);
+    if (request) {
+            try {
+                const response = await chrome.debugger.sendCommand(
+                {tabId: tabId},
+                "Fetch.getResponseBody",
+                {requestId: params.requestId}
+                );
+
+            request.responseBody = response.base64Encoded ?
+                atob(response.body) : response.body;
+
+            recordedData.metadata.responsesWithBody++;
+            console.log(`Response body saved for ${params.networkId}`);
+    } catch (err) {
+            console.warn(`Failed to get response body for ${params.networkId}:`, err);
+            request.responseBody = '';
+            request.error = 'Failed to fetch response body';
+        }
+        }
+
+    // Continue the request
+    await chrome.debugger.sendCommand(
+        {tabId: tabId},
+        "Fetch.continueRequest",
+        {requestId: params.requestId}
+    );
+}
+
+function handleLoadingFinished(params) {
+    const request = pendingRequests.get(params.requestId);
+    if (request) {
+        recordedData.requests[getRequestKey(request)] = request;
+        pendingRequests.delete(params.requestId);
+        console.log('Request completed:', params.requestId);
+    }
+}
+
+function handleLoadingFailed(params) {
+    console.warn('Loading failed for:', params.requestId);
+    pendingRequests.delete(params.requestId);
 }
 
 function saveRecording() {
     const data = {
         name: currentRecordingName,
         filter: currentFilter,
-        requests: recordedData,
+        requests: recordedData.requests,
         timestamp: Date.now(),
         metadata: {
             totalRequests: Object.keys(recordedData).length,
@@ -380,3 +441,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     }
 });
 
+function getRequestKey(request) {
+    const url = new URL(request.url);
+    const relativePath = url.pathname + url.search;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    if (request.method === 'GET') {
+        return `GET_${relativePath}_${timestamp}`;
+    } else {
+        return `${request.method}_${relativePath}_${JSON.stringify(request.postData || {})}_${timestamp}`;
+    }
+}

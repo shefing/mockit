@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (chrome.runtime.lastError) {
                     console.error('Load recording error:', chrome.runtime.lastError);
                     apiPreviewDiv.textContent = 'Error loading API preview';
-                } else if (result[name]) {
+                } else if (result[name] && result[name].requests) {
                     const requests = result[name].requests;
                     const replayedRequests = result.replayedRequests || {};
                     const paths = new Set();
@@ -402,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         el.addEventListener('click', () => showApiCallDetails(name, el.getAttribute('data-path')));
                     });
                 } else {
-                    apiPreviewDiv.textContent = 'No recording found';
+                    apiPreviewDiv.textContent = 'No recording found or invalid recording format';
                 }
             });
         } else {
@@ -541,6 +541,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('dark');
         document.getElementById('apiCallModal').classList.add('dark');
     }
+
+   // Listen for messages from the background script
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === 'recordingSaved') {
+            loadRecordings();
+            recordingSelect.value = request.name;
+            updateApiPreview();
+        }
+    });
 
     initCustomSelect();
 });
