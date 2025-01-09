@@ -5,6 +5,7 @@
   "description": "Record and replay network traffic for web applications using Chrome Debugger Protocol",
   "permissions": [
     "storage",
+    "unlimitedStorage",
     "activeTab",
     "debugger",
     "tabs"
