@@ -23,7 +23,7 @@
         <div class="mb-4">
             <div class="grid grid-cols-1 gap-2 mt-2">
                 <input type="text" id="recordingName" placeholder="Recording Name" class="p-1 text-sm border rounded dark:bg-gray-700" title="Enter a name for your recording">
-                <input type="text" id="filter" placeholder="Filter (e.g., /api)" class="p-1 text-sm border rounded dark:bg-gray-700" title="Enter URL patterns to filter, separated by commas">
+                <input type="text" id="filter" placeholder="Filter (e.g., /api, /graphql, /v1)" class="p-1 text-sm border rounded dark:bg-gray-700" title="Enter URL patterns to filter, separated by commas">
                 <button id="recordButton" class="bg-blue-500 text-white px-4 py-1 rounded text-sm" title="Start or stop recording">Start Recording</button>
             </div>
         </div>
@@ -63,7 +63,7 @@
                         <div id="deleteMenu" class="origin-top-right absolute right-0 mt-1 w-15 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="deleteDropdown">
                             <div class="py-1" role="none">
                                 <button id="deleteRecord" class="text-white bg-red-500 px-2 py-1 rounded text-xs w-full text-left hover:bg-red-600 mb-1" role="menuitem">Delete</button>
-                                <button id="removeAllRecordings" class="text-white bg-red-500 px-2 py-1 rounded text-xs w-full text-left hover:bg-red-600" role="menuitem">Delete All</button>
+                                <button id="removeAllRecordings" class="text-white bg-red-500 px-2 py-1 rounded text-xs w-full text-left hover:bg-red-600" role="menuitem">Remove All</button>
                             </div>
                         </div>
                     </div>

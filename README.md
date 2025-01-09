@@ -36,7 +36,7 @@ Mockit - the Network Traffic Recorder and Replayer is a powerful Chrome extensio
 
 1. Click on the extension icon to open the popup.
 2. Enter a name for your recording in the "Recording Name" field.
-3. (Optional) Modify the filter in the "Filter" field. By default, it captures requests containing "/api" in the URL. You can add multiple filters separated by commas (e.g., "/api, /graphql").
+3. (Optional) Modify the filter in the "Filter" field. By default, it captures requests containing "/api" in the URL. You can add multiple filters separated by commas (e.g., "/api, /graphql, /v1").
 4. Click the "Start Recording" button.
 5. Navigate to the website you want to record traffic from.
 6. The API preview will update in real-time as requests are captured.
