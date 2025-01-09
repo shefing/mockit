@@ -279,7 +279,7 @@ body.dark {
 }
 
 #exportImportMenu {
-    min-width: 120px;
+    min-width: 100px;
     padding: 0.5rem;
     z-index: 1;
 }
@@ -318,7 +318,72 @@ body.dark {
     background-color: #1d4ed8;
 }
 
-.delete-menu-z-index {
-  z-index: 10;
+#deleteMenu{
+    min-width: 100px;
+    padding: 0.5rem;
+    z-index: 1;
+}
+
+/* Rename Dialog Styles */
+#renameDialog {
+    height: 240px;
+}
+#renameDialog .bg-white {
+    background-color: #ffffff;
+}
+
+#renameDialog.dark .bg-white,
+#renameDialog.dark .dark\:bg-gray-800 {
+    background-color: #1a1a1a;
+}
+
+#renameDialog .text-gray-900 {
+    color: #1a202c;
+}
+
+#renameDialog.dark .text-gray-900 {
+    color: #e2e8f0;
+}
+
+#renameDialog input {
+    font-size: 14px;
+    resize: none;
+}
+
+#renameDialog.dark input {
+    color: #e2e8f0;
+    background-color: #2a2a2a;
+}
+
+#renameDialog button {
+    transition: background-color 0.3s;
+}
+
+#renameDialog button:hover {
+    opacity: 0.9;
+}
+
+#renameDialog.dark .dark\:text-white {
+    color: #ffffff;
+}
+
+#renameDialog.dark .dark\:border-gray-600 {
+    border-color: #4a5568;
+}
+
+/* Ensure the rename dialog takes 90% of the popup width */
+#renameDialog > div {
+    max-width: 90%;
+    width: 90%;
+}
+
+/* Style the input to take up more vertical space */
+#renameDialog input[type="text"] {
+    height: 120px;
+    padding: 8px;
+}
+
+#renameDialog .flex-col {
+    justify-content: space-between;
 }
 

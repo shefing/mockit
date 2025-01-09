@@ -23,6 +23,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteDropdown = document.getElementById('deleteDropdown');
     const deleteMenu = document.getElementById('deleteMenu');
     const duplicateRecordingBtn = document.getElementById('duplicateRecording'); // Added
+    const renameRecordingBtn = document.getElementById('renameRecording');
+    const renameDialog = document.getElementById('renameDialog');
+    const newRecordingNameInput = document.getElementById('newRecordingName');
+    const cancelRenameBtn = document.getElementById('cancelRename');
+    const confirmRenameBtn = document.getElementById('confirmRename');
 
 
     let isRecording = false;
@@ -194,13 +199,14 @@ document.addEventListener('DOMContentLoaded', () => {
         importAllRecordingsInput.disabled = isRecording || isReplaying; // Added
         removeAllRecordingsBtn.disabled = isRecording || isReplaying;
         duplicateRecordingBtn.disabled = !isRecordingSelected || isRecording || isReplaying; // Added
+        renameRecordingBtn.disabled = !isRecordingSelected || isRecording || isReplaying; // Added
 
         exportImportDropdown.disabled = isRecording || isReplaying;
         exportAllRecordingsBtn.disabled = isRecording || isReplaying;
         importAllRecordingsInput.disabled = isRecording || isReplaying; // Updated
         deleteDropdown.disabled = !isRecordingSelected || isRecording || isReplaying;
 
-        [recordingSelect, exportImportDropdown, deleteDropdown, deleteRecordBtn, removeAllRecordingsBtn, replayButton, duplicateRecordingBtn].forEach(el => { // Updated
+        [recordingSelect, exportImportDropdown, deleteDropdown, deleteRecordBtn, removeAllRecordingsBtn, replayButton, duplicateRecordingBtn, renameRecordingBtn].forEach(el => { // Updated
             if (el.disabled) {
                 el.classList.add('disabled');
             } else {
@@ -727,5 +733,76 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Add this new function to handle the renaming process
+    function renameRecording(oldName, newName) {
+        chrome.storage.local.get(oldName, (result) => {
+            if (chrome.runtime.lastError) {
+                console.error('Rename recording error:', chrome.runtime.lastError);
+                alert('Failed to rename recording. Please check the console for errors.');
+            } else if (result[oldName]) {
+                const updatedRecording = result[oldName];
+                updatedRecording.name = newName;
+
+                chrome.storage.local.set({ [newName]: updatedRecording }, () => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Save renamed recording error:', chrome.runtime.lastError);
+                        alert('Failed to save renamed recording. Please check the console for errors.');
+                    } else {
+                        chrome.storage.local.remove(oldName, () => {
+                            if (chrome.runtime.lastError) {
+                                console.error('Remove old recording error:', chrome.runtime.lastError);
+                                alert('Failed to remove old recording. Please check the console for errors.');
+                            } else {
+                                console.log('Recording renamed');
+                                loadRecordings();
+                                recordingSelect.value = newName;
+                                updateApiPreview();
+                                chrome.storage.local.set({ 'lastUsedRecord': newName });
+                                alert(`Recording renamed successfully to "${newName}"`);
+                                renameDialog.classList.add('hidden');
+                                exportImportMenu.classList.add('hidden');
+                            }
+                        });
+                    }
+                });
+            } else {
+                alert('No recording found with the name: ' + oldName);
+            }
+        });
+    }
+
+    // Add event listener for the rename button
+    renameRecordingBtn.addEventListener('click', () => {
+        const currentRecording = recordingSelect.value;
+        if (currentRecording) {
+            newRecordingNameInput.value = currentRecording;
+            renameDialog.classList.remove('hidden');
+        } else {
+            alert('Please select a recording to rename.');
+        }
+    });
+
+    // Add event listeners for the rename dialog buttons
+    cancelRenameBtn.addEventListener('click', () => {
+        renameDialog.classList.add('hidden');
+    });
+
+    confirmRenameBtn.addEventListener('click', () => {
+        const oldName = recordingSelect.value;
+        const newName = newRecordingNameInput.value.trim();
+        if (newName && newName !== oldName) {
+            renameRecording(oldName, newName);
+        } else {
+            alert('Please enter a new name for the recording.');
+        }
+    });
+
+    // Close rename dialog when clicking outside
+    renameDialog.addEventListener('click', (e) => {
+        if (e.target === renameDialog) {
+            renameDialog.classList.add('hidden');
+        }
+    });
 });
 
