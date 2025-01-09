@@ -2,7 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const recordButton = document.getElementById('recordButton');
     const replayButton = document.getElementById('replayButton');
     const exportRecordingBtn = document.getElementById('exportRecording');
-    const importRecordingInput = document.getElementById('importRecording');
+    const importRecordingInput = document.getElementById('importRecordingInput');
+    const importAllRecordingsInput = document.getElementById('importAllRecordingsInput'); // Added
     const recordingNameInput = document.getElementById('recordingName');
     const filterInput = document.getElementById('filter');
     const recordingSelect = document.getElementById('recordingSelect');
@@ -16,6 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiCallDetails = document.getElementById('apiCallDetails');
     const closeModalBtn = document.getElementById('closeModal');
     const darkModeToggle = document.getElementById('darkModeToggle');
+    const exportImportDropdown = document.getElementById('exportImportDropdown');
+    const exportImportMenu = document.getElementById('exportImportMenu');
+    const exportAllRecordingsBtn = document.getElementById('exportAllRecordings');
+    const deleteDropdown = document.getElementById('deleteDropdown');
+    const deleteMenu = document.getElementById('deleteMenu');
+
 
     let isRecording = false;
     let isReplaying = false;
@@ -183,9 +190,15 @@ document.addEventListener('DOMContentLoaded', () => {
         exportRecordingBtn.disabled = !isRecordingSelected || isRecording || isReplaying;
         deleteRecordBtn.disabled = !isRecordingSelected || isRecording || isReplaying;
         importRecordingInput.disabled = isRecording || isReplaying;
+        importAllRecordingsInput.disabled = isRecording || isReplaying; // Added
         removeAllRecordingsBtn.disabled = isRecording || isReplaying;
 
-        [recordingSelect, exportRecordingBtn, deleteRecordBtn, importRecordingInput.parentElement, removeAllRecordingsBtn, replayButton].forEach(el => {
+        exportImportDropdown.disabled = isRecording || isReplaying;
+        exportAllRecordingsBtn.disabled = isRecording || isReplaying;
+        importAllRecordingsInput.disabled = isRecording || isReplaying; // Updated
+        deleteDropdown.disabled = !isRecordingSelected || isRecording || isReplaying;
+
+        [recordingSelect, exportImportDropdown, deleteDropdown, deleteRecordBtn, removeAllRecordingsBtn, replayButton].forEach(el => {
             if (el.disabled) {
                 el.classList.add('disabled');
             } else {
@@ -242,18 +255,27 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.onload = (e) => {
                 try {
                     const data = JSON.parse(e.target.result);
-                    chrome.storage.local.set({ [data.name]: data }, () => {
-                        if (chrome.runtime.lastError) {
-                            console.error('Import recording error:', chrome.runtime.lastError);
-                            alert('Failed to import recording. Please check the console for errors.');
-                        } else {
-                            console.log('Recording imported');
-                            loadRecordings();
-                            recordingSelect.value = data.name;
-                            updateApiPreview();
-                            chrome.storage.local.set({ 'lastUsedRecord': data.name });
-                            alert(`Recording imported successfully as "${data.name}"`);
+                    let name = data.name;
+                    chrome.storage.local.get(null, (result) => {
+                        let counter = 1;
+                        let newName = name;
+                        while (result[newName]) {
+                            counter++;
+                            newName = `${name} (${counter})`;
                         }
+                        chrome.storage.local.set({ [newName]: data }, () => {
+                            if (chrome.runtime.lastError) {
+                                console.error('Import recording error:', chrome.runtime.lastError);
+                                alert('Failed to import recording. Please check the console for errors.');
+                            } else {
+                                console.log('Recording imported');
+                                loadRecordings();
+                                recordingSelect.value = newName;
+                                updateApiPreview();
+                                chrome.storage.local.set({ 'lastUsedRecord': newName });
+                                alert(`Recording imported successfully as "${newName}"`);
+                            }
+                        });
                     });
                 } catch (error) {
                     console.error('Import recording parse error:', error);
@@ -297,7 +319,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     lastUsedRecord = data.lastUsedRecord || '';
 
                     for (const key in result) {
-                        if (key !== 'lastUsedRecord' && key !== 'isRecording' && key !== 'isReplaying' && key !== 'currentRecordingName' && key !== 'currentFilter') {
+                        if (key !== 'lastUsedRecord' &&
+                            key !== 'isRecording' &&
+                            key !== 'isReplaying' &&
+                            key !== 'currentRecordingName' &&
+                            key !== 'currentFilter' &&
+                            key !== 'replayTabId' &&
+                            typeof result[key] === 'object' &&
+                            result[key].hasOwnProperty('requests')) {
                             allRecordings.push(key);
                         }
                     }
@@ -465,8 +494,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     responseBodyTextarea.style.height = `${responseBodyTextarea.scrollHeight}px`;
 
                     const saveChangesBtn = document.getElementById('saveChanges');
-                    const requestKey = Object.keys(requests).find(key => requests[key] === matchingRequest);
-                    saveChangesBtn.addEventListener('click', () => saveApiCallChanges(recordingName, requestKey));
+                    // Remove any existing event listeners
+                    const newSaveChangesBtn = saveChangesBtn.cloneNode(true);
+                    saveChangesBtn.parentNode.replaceChild(newSaveChangesBtn, saveChangesBtn);
+                    newSaveChangesBtn.addEventListener('click', () => saveApiCallChanges(recordingName, requestKey));
 
                     apiCallModal.classList.remove('hidden');
                 } else {
@@ -519,12 +550,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     closeModalBtn.addEventListener('click', () => {
+        const saveChangesBtn = document.getElementById('saveChanges');
+        const newSaveChangesBtn = saveChangesBtn.cloneNode(true);
+        saveChangesBtn.parentNode.replaceChild(newSaveChangesBtn, saveChangesBtn);
         apiCallModal.classList.add('hidden');
     });
 
     // Close modal when clicking outside
     apiCallModal.addEventListener('click', (e) => {
         if (e.target === apiCallModal) {
+            const saveChangesBtn = document.getElementById('saveChanges');
+            const newSaveChangesBtn = saveChangesBtn.cloneNode(true);
+            saveChangesBtn.parentNode.replaceChild(newSaveChangesBtn, saveChangesBtn);
             apiCallModal.classList.add('hidden');
         }
     });
@@ -542,7 +579,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('apiCallModal').classList.add('dark');
     }
 
-   // Listen for messages from the background script
+    // Listen for messages from the background script
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.action === 'recordingSaved') {
             loadRecordings();
@@ -552,5 +589,101 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     initCustomSelect();
+
+
+    exportImportDropdown.addEventListener('click', () => {
+        exportImportMenu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!exportImportDropdown.contains(event.target) && !exportImportMenu.contains(event.target)) {
+            exportImportMenu.classList.add('hidden');
+        }
+    });
+
+    exportAllRecordingsBtn.addEventListener('click', exportAllRecordings);
+    importAllRecordingsInput.addEventListener('change', importAllRecordings);
+
+    // Update import button click handlers
+    document.getElementById('importRecording').addEventListener('click', () => {
+        document.getElementById('importRecordingInput').click();
+    });
+
+    document.getElementById('importAllRecordings').addEventListener('click', () => {
+        document.getElementById('importAllRecordingsInput').click();
+    });
+
+
+    function exportAllRecordings() {
+        chrome.storage.local.get(null, (result) => {
+            const recordings = Object.entries(result)
+                .filter(([key, value]) =>
+                    typeof value === 'object' &&
+                    value !== null &&
+                    value.hasOwnProperty('requests')
+                )
+                .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+
+            const blob = new Blob([JSON.stringify(recordings)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'all_recordings.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    function importAllRecordings(event) {
+        const files = event.target.files;
+        if (files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedRecordings = JSON.parse(e.target.result);
+                    chrome.storage.local.get(null, (existingData) => {
+                        const newData = {};
+                        for (const [name, data] of Object.entries(importedRecordings)) {
+                            let newName = name;
+                            let counter = 1;
+                            while (existingData[newName] || newData[newName]) {
+                                counter++;
+                                newName = `${name} (${counter})`;
+                            }
+                            newData[newName] = data;
+                        }
+                        chrome.storage.local.set(newData, () => {
+                            if (chrome.runtime.lastError) {
+                                console.error('Import all recordings error:', chrome.runtime.lastError);
+                                alert('Failed to import recordings. Please check the console for errors.');
+                            } else {
+                                console.log('All recordings imported');
+                                loadRecordings();
+                                alert('All recordings imported successfully');
+                            }
+                        });
+                    });
+                } catch (error) {
+                    console.error('Import all recordings parse error:', error);
+                    alert('Failed to parse the imported file. Please make sure it\'s a valid JSON file.');
+                }
+            };
+            reader.readAsText(files[0]);
+        }
+    }
+
+    // Add this new event listener for the delete dropdown
+    deleteDropdown.addEventListener('click', () => {
+        deleteMenu.classList.toggle('hidden');
+    });
+
+    // Close delete menu when clicking outside
+    document.addEventListener('click', (event) => {
+        if (!deleteDropdown.contains(event.target) && !deleteMenu.contains(event.target)) {
+            deleteMenu.classList.add('hidden');
+        }
+    });
 });
 

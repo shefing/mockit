@@ -6,6 +6,11 @@
     <title>Network Traffic Recorder and Replayer</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="styles.css" rel="stylesheet">
+    <style>
+      .delete-menu-z-index {
+        z-index: 10;
+      }
+    </style>
 </head>
 <body class="bg-gray-100 text-gray-900 dark:bg-black dark:text-gray-100">
 <div class="h-full flex flex-col">
@@ -33,13 +38,38 @@
                 <h3 class="text-base font-semibold">Manage Recordings</h3>
                 <div class="flex gap-1">
                     <button id="replayButton" class="bg-blue-500 text-white px-2 py-1 rounded text-xs" title="Start or stop replaying">Replay</button>
-                    <button id="exportRecording" class="bg-green-500 text-white px-2 py-1 rounded text-xs" title="Export selected recording">Export</button>
-                    <label for="importRecording" class="bg-purple-500 text-white px-2 py-1 rounded text-xs cursor-pointer" title="Import a recording">
-                        Import
-                        <input type="file" id="importRecording" accept=".json" class="hidden">
-                    </label>
-                    <button id="deleteRecord" class="bg-red-500 text-white px-2 py-1 rounded text-xs" title="Delete selected recording">Delete</button>
-                    <button id="removeAllRecordings" class="bg-red-500 text-white px-2 py-1 rounded text-xs" title="Remove all recordings">Remove All</button>
+                    <div class="relative inline-block text-left">
+                        <button id="exportImportDropdown" type="button" class="bg-blue-500 text-white px-2 py-1 rounded text-xs inline-flex items-center" aria-haspopup="true" aria-expanded="false">
+                            Export/Import
+                            <svg class="-mr-1 ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div id="exportImportMenu" class="origin-top-right absolute right-0 mt-1 w-32 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="exportImportDropdown">
+                            <div class="py-1" role="none">
+                                <button id="exportRecording" class="text-white bg-blue-500 px-2 py-1 rounded text-xs w-full text-left hover:bg-blue-600 mb-1" role="menuitem">Export</button>
+                                <button id="importRecording" class="text-white bg-blue-500 px-2 py-1 rounded text-xs w-full text-left hover:bg-blue-600 mb-1" role="menuitem">Import</button>
+                                <button id="exportAllRecordings" class="text-white bg-blue-500 px-2 py-1 rounded text-xs w-full text-left hover:bg-blue-600 mb-1" role="menuitem">Export All</button>
+                                <button id="importAllRecordings" class="text-white bg-blue-500 px-2 py-1 rounded text-xs w-full text-left hover:bg-blue-600" role="menuitem">Import All</button>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="file" id="importRecordingInput" accept=".json" class="hidden">
+                    <input type="file" id="importAllRecordingsInput" accept=".json" class="hidden" multiple>
+                    <div class="relative inline-block text-left">
+                        <button id="deleteDropdown" type="button" class="bg-red-500 text-white px-2 py-1 rounded text-xs inline-flex items-center" aria-haspopup="true" aria-expanded="false">
+                            Delete
+                            <svg class="-mr-1 ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div id="deleteMenu" class="origin-top-right absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none hidden delete-menu-z-index" role="menu" aria-orientation="vertical" aria-labelledby="deleteDropdown">
+                            <div class="py-1" role="none">
+                                <button id="deleteRecord" class="text-white bg-red-500 px-2 py-1 rounded text-xs w-full text-left hover:bg-red-600 mb-1" role="menuitem">Delete Selected</button>
+                                <button id="removeAllRecordings" class="text-white bg-red-500 px-2 py-1 rounded text-xs w-full text-left hover:bg-red-600" role="menuitem">Remove All</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="relative">

@@ -278,3 +278,47 @@ body.dark {
     background-color: #2d3748;
 }
 
+#exportImportMenu {
+    min-width: 120px;
+    padding: 0.5rem;
+    z-index: 1;
+}
+
+#exportImportMenu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    margin-bottom: 0.25rem;
+}
+
+#exportImportMenu button:last-child {
+    margin-bottom: 0;
+}
+
+#exportImportMenu button:hover {
+    background-color: #2563eb;
+}
+
+.dark #exportImportMenu button:hover {
+    background-color: #1d4ed8;
+}
+
+#exportImportMenu label {
+    display: block;
+    width: 100%;
+    text-align: left;
+    margin: 2px 0;
+}
+
+#exportImportMenu label:hover {
+    background-color: #2563eb;
+}
+
+.dark #exportImportMenu label:hover {
+    background-color: #1d4ed8;
+}
+
+.delete-menu-z-index {
+  z-index: 10;
+}
+
