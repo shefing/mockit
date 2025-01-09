@@ -429,9 +429,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         paths.add(url.pathname + url.search);
                     }
 
+                    // Sort the paths alphabetically
+                    const sortedPaths = Array.from(paths).sort();
+
                     // Create the preview HTML
                     apiPreviewDiv.innerHTML = '<h4 class="font-semibold mb-1 text-xs">API Paths:</h4>' +
-                        Array.from(paths)
+                        sortedPaths
                             .map(path => {
                                 const pathWithoutQuery = path.split('?')[0];
                                 const replayCount = (replayedRequests[pathWithoutQuery] || 0);
