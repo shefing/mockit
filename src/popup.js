@@ -33,6 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let isRecording = false;
     let isReplaying = false;
     let allRecordings = [];
+    let currentRecordingApis = new Set();
+    let isUpdating = false;
 
     // Set default filter
     filterInput.value = '/api';
@@ -121,6 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 isRecording = true;
                 updateButtonStates();
                 updateStatusIndicator();
+                recordingSelect.value = name;
+                updateApiPreview();
                 alert('Recording started. The page will refresh to begin capturing network traffic.');
             } else {
                 alert('Failed to start recording: ' + (response ? response.error : 'Unknown error'));
@@ -135,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Failed to stop recording. Please check the console for errors.');
             } else if (response && response.success) {
                 isRecording = false;
+                currentRecordingApis.clear();
                 updateButtonStates();
                 updateStatusIndicator();
                 loadRecordings();
@@ -408,6 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateApiPreview() {
         const name = recordingSelect.value;
         if (name) {
+            setUpdatingState(true);
             chrome.storage.local.get(['replayedRequests', name], (result) => {
                 if (chrome.runtime.lastError) {
                     console.error('Load recording error:', chrome.runtime.lastError);
@@ -417,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const replayedRequests = result.replayedRequests || {};
                     const paths = new Set();
 
-                    // First, collect all unique paths with query parameters
+                    // Collect all unique paths with query parameters
                     for (const key in requests) {
                         const url = new URL(requests[key].url);
                         paths.add(url.pathname + url.search);
@@ -441,6 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     apiPreviewDiv.textContent = 'No recording found or invalid recording format';
                 }
+                setUpdatingState(false);
             });
         } else {
             apiPreviewDiv.textContent = 'No recording selected';
@@ -593,6 +600,16 @@ document.addEventListener('DOMContentLoaded', () => {
             loadRecordings();
             recordingSelect.value = request.name;
             updateApiPreview();
+        } else if (request.action === 'newApiCall') {
+            if (isRecording) {
+                const url = new URL(request.data.url);
+                currentRecordingApis.add(url.pathname + url.search);
+                updateApiPreview();
+            }
+        } else if (request.action === 'recordingUpdated') {
+            if (request.name === recordingSelect.value) {
+                updateApiPreview();
+            }
         }
     });
 
@@ -804,5 +821,14 @@ document.addEventListener('DOMContentLoaded', () => {
             renameDialog.classList.add('hidden');
         }
     });
+
+    function setUpdatingState(updating) {
+        isUpdating = updating;
+        if (updating) {
+            apiPreviewDiv.classList.add('updating');
+        } else {
+            apiPreviewDiv.classList.remove('updating');
+        }
+    }
 });
 

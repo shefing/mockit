@@ -72,6 +72,15 @@ async function startRecording(name, filter, sendResponse) {
     recordedData = {requests:{},metadata:{}};
     updateState();
 
+    // Store the new recording and make it current
+    chrome.storage.local.set({ [currentRecordingName]: recordedData }, () => {
+        if (chrome.runtime.lastError) {
+            console.error('Error storing new recording:', chrome.runtime.lastError);
+        } else {
+            console.log('New recording stored:', currentRecordingName);
+        }
+    });
+
     try {
         const tabs = await chrome.tabs.query({active: true, currentWindow: true});
         if (tabs[0]) {
@@ -136,11 +145,13 @@ async function fetchPendingRequests() {
             recordedData.requests[getRequestKey(request)] = request;
             recordedData.metadata.responsesWithBody++;
             console.log(`Response body fetched for ${request.requestId}`);
+            updateRecording();
         } catch (err) {
             console.warn(`Failed to fetch response body for ${request.requestId}:`, err);
             request.responseBody = '';
             request.error = 'Failed to fetch response body';
             recordedData.requests[getRequestKey(request)] = request;
+            updateRecording();
         } finally {
             pendingRequests.delete(request.requestId);
         }
@@ -189,6 +200,7 @@ function handleRequestWillBeSent(params) {
     });
         recordedData.metadata.totalRequests++;
         console.log('Request tracked:', params.requestId);
+        updateRecording();
     }
 }
 
@@ -199,6 +211,7 @@ function handleResponseReceived(params) {
         request.status = params.response.status;
         request.statusText = params.response.statusText;
         console.log('Response received for:', params.requestId);
+        updateRecording();
     }
 }
 
@@ -217,10 +230,12 @@ async function handleRequestPaused(tabId, params) {
 
             recordedData.metadata.responsesWithBody++;
             console.log(`Response body saved for ${params.networkId}`);
+            updateRecording();
     } catch (err) {
             console.warn(`Failed to get response body for ${params.networkId}:`, err);
             request.responseBody = '';
             request.error = 'Failed to fetch response body';
+            updateRecording();
         }
         }
 
@@ -238,12 +253,25 @@ function handleLoadingFinished(params) {
         recordedData.requests[getRequestKey(request)] = request;
         pendingRequests.delete(params.requestId);
         console.log('Request completed:', params.requestId);
+        updateRecording();
     }
 }
 
 function handleLoadingFailed(params) {
     console.warn('Loading failed for:', params.requestId);
     pendingRequests.delete(params.requestId);
+    updateRecording();
+}
+
+function updateRecording() {
+    chrome.storage.local.set({ [currentRecordingName]: recordedData }, () => {
+        if (chrome.runtime.lastError) {
+            console.error('Update recording error:', chrome.runtime.lastError);
+        } else {
+            console.log('Recording updated:', currentRecordingName);
+            chrome.runtime.sendMessage({ action: 'recordingUpdated', name: currentRecordingName });
+        }
+    });
 }
 
 function saveRecording() {
@@ -358,7 +386,11 @@ async function replayingListener(debuggeeId, message, params) {
             console.log('Intercepted request:', key);
             const recordedResponse = recordedData[key];
 
-            try {
+            const responseHeaders = recordedResponse.responseHeaders || {};
+            const headerString = Object.entries(responseHeaders)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join('\r\n');
+
                 await chrome.debugger.sendCommand(
                     {tabId: debuggeeId.tabId},
                     "Network.continueInterceptedRequest",
@@ -366,9 +398,9 @@ async function replayingListener(debuggeeId, message, params) {
                         interceptionId: params.interceptionId,
                         rawResponse: btoa(unescape(encodeURIComponent(
                             `HTTP/1.1 ${recordedResponse.status} OK\r\n` +
-                            Object.entries(recordedResponse.responseHeaders).map(([k, v]) => `${k}: ${v}`).join('\r\n') +
+                        headerString +
                             '\r\n\r\n' +
-                            recordedResponse.responseBody
+                        (recordedResponse.responseBody || '')
                         )))
                     }
                 );
@@ -382,16 +414,6 @@ async function replayingListener(debuggeeId, message, params) {
                 });
 
                 console.log('Replayed response for:', key);
-            } catch (e) {
-                console.error('Failed to replay response:', e);
-                await chrome.debugger.sendCommand(
-                    {tabId: debuggeeId.tabId},
-                    "Network.continueInterceptedRequest",
-                    {
-                        interceptionId: params.interceptionId
-                    }
-                );
-            }
         } else {
             await chrome.debugger.sendCommand(
                 {tabId: debuggeeId.tabId},
