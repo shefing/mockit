@@ -3,7 +3,7 @@
 
 ## Introduction
 
-The Network Traffic Recorder and Replayer is a powerful Chrome extension designed to capture and replay network requests. It's an invaluable tool for developers, QA engineers, and anyone who needs to debug, test, or demonstrate web applications with consistent network behavior.
+Mockit - the Network Traffic Recorder and Replayer is a powerful Chrome extension designed to capture and replay network requests. It's an invaluable tool for developers, QA engineers, and anyone who needs to debug, test, or demonstrate web applications with consistent network behavior.
 
 ## Features
 
@@ -17,6 +17,9 @@ The Network Traffic Recorder and Replayer is a powerful Chrome extension designe
 - Dark mode for comfortable viewing in different environments
 - API preview with replay counts for each endpoint
 - Manage multiple recordings with an improved user interface
+- Real-time recording updates in the API preview
+- Ability to rename recordings
+- Ability to duplicate recordings
 
 ## Installation
 
@@ -36,13 +39,13 @@ The Network Traffic Recorder and Replayer is a powerful Chrome extension designe
 3. (Optional) Modify the filter in the "Filter" field. By default, it captures requests containing "/api" in the URL. You can add multiple filters separated by commas (e.g., "/api, /graphql").
 4. Click the "Start Recording" button.
 5. Navigate to the website you want to record traffic from.
-6. When finished, click "Stop Recording" in the extension popup.
+6. The API preview will update in real-time as requests are captured.
 
 ### Replaying Network Traffic
 
 1. Open the extension popup.
 2. Select a recording from the dropdown menu.
-3. (Optional) Check the "Enable fallback matching for similar paths" checkbox for more flexible request matching.
+3. (Optional) Check the "Enable fallback matching for similar paths" checkbox for more flexible request matching.  This option allows for more flexible matching of requests during replay.
 4. Click the "Replay" button.
 5. Navigate to the website where you want to replay the traffic.
 6. The extension will intercept and respond to matching requests with the recorded data.
@@ -59,8 +62,11 @@ The Network Traffic Recorder and Replayer is a powerful Chrome extension designe
 
 - The extension provides an API preview that shows all captured API paths for the selected recording.
 - It displays the number of times each path has been replayed in the current session.
+- The API preview updates in real-time during recording.
 - Click on an API path to view and edit its details, including the response body.
 - Make changes to the response body and click "Save Changes" to update the recording.
+- You can rename recordings by selecting a recording and clicking the 'Rename' option in the File menu.
+- You can duplicate recordings by selecting a recording and clicking the 'Duplicate' option in the File menu.
 
 ### Dark Mode
 
