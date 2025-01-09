@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportAllRecordingsBtn = document.getElementById('exportAllRecordings');
     const deleteDropdown = document.getElementById('deleteDropdown');
     const deleteMenu = document.getElementById('deleteMenu');
+    const duplicateRecordingBtn = document.getElementById('duplicateRecording'); // Added
 
 
     let isRecording = false;
@@ -192,13 +193,14 @@ document.addEventListener('DOMContentLoaded', () => {
         importRecordingInput.disabled = isRecording || isReplaying;
         importAllRecordingsInput.disabled = isRecording || isReplaying; // Added
         removeAllRecordingsBtn.disabled = isRecording || isReplaying;
+        duplicateRecordingBtn.disabled = !isRecordingSelected || isRecording || isReplaying; // Added
 
         exportImportDropdown.disabled = isRecording || isReplaying;
         exportAllRecordingsBtn.disabled = isRecording || isReplaying;
         importAllRecordingsInput.disabled = isRecording || isReplaying; // Updated
         deleteDropdown.disabled = !isRecordingSelected || isRecording || isReplaying;
 
-        [recordingSelect, exportImportDropdown, deleteDropdown, deleteRecordBtn, removeAllRecordingsBtn, replayButton].forEach(el => {
+        [recordingSelect, exportImportDropdown, deleteDropdown, deleteRecordBtn, removeAllRecordingsBtn, replayButton, duplicateRecordingBtn].forEach(el => { // Updated
             if (el.disabled) {
                 el.classList.add('disabled');
             } else {
@@ -685,5 +687,45 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteMenu.classList.add('hidden');
         }
     });
+
+    // Add this new event listener for the duplicate button
+    duplicateRecordingBtn.addEventListener('click', () => {
+        const currentRecording = recordingSelect.value;
+        if (currentRecording) {
+            duplicateRecording(currentRecording);
+        } else {
+            alert('Please select a recording to duplicate.');
+        }
+    });
+
+    function duplicateRecording(recordingName) {
+        chrome.storage.local.get(recordingName, (result) => {
+            if (chrome.runtime.lastError) {
+                console.error('Duplicate recording error:', chrome.runtime.lastError);
+                alert('Failed to duplicate recording. Please check the console for errors.');
+            } else if (result[recordingName]) {
+                const newName = `${recordingName} (copy)`;
+                const duplicatedData = JSON.parse(JSON.stringify(result[recordingName]));
+                duplicatedData.name = newName;
+
+                chrome.storage.local.set({ [newName]: duplicatedData }, () => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Save duplicated recording error:', chrome.runtime.lastError);
+                        alert('Failed to save duplicated recording. Please check the console for errors.');
+                    } else {
+                        console.log('Recording duplicated');
+                        loadRecordings();
+                        recordingSelect.value = newName;
+                        updateApiPreview();
+                        chrome.storage.local.set({ 'lastUsedRecord': newName });
+                        alert(`Recording duplicated successfully as "${newName}"`);
+                        exportImportMenu.classList.add('hidden'); // Close the menu
+                    }
+                });
+            } else {
+                alert('No recording found with the name: ' + recordingName);
+            }
+        });
+    }
 });
 
