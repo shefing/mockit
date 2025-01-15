@@ -512,10 +512,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     responseBodyTextarea.style.height = `${responseBodyTextarea.scrollHeight}px`;
 
                     const saveChangesBtn = document.getElementById('saveChanges');
-                    // Remove any existing event listeners
-                    const newSaveChangesBtn = saveChangesBtn.cloneNode(true);
-                    saveChangesBtn.parentNode.replaceChild(newSaveChangesBtn, saveChangesBtn);
-                    newSaveChangesBtn.addEventListener('click', () => saveApiCallChanges(recordingName, requestKey));
+                    const requestKey = Object.keys(requests).find(key => requests[key] === matchingRequest);
+                    saveChangesBtn.addEventListener('click', () => saveApiCallChanges(recordingName, requestKey));
 
                     apiCallModal.classList.remove('hidden');
                 } else {
@@ -568,18 +566,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     closeModalBtn.addEventListener('click', () => {
-        const saveChangesBtn = document.getElementById('saveChanges');
-        const newSaveChangesBtn = saveChangesBtn.cloneNode(true);
-        saveChangesBtn.parentNode.replaceChild(newSaveChangesBtn, saveChangesBtn);
         apiCallModal.classList.add('hidden');
     });
 
     // Close modal when clicking outside
     apiCallModal.addEventListener('click', (e) => {
         if (e.target === apiCallModal) {
-            const saveChangesBtn = document.getElementById('saveChanges');
-            const newSaveChangesBtn = saveChangesBtn.cloneNode(true);
-            saveChangesBtn.parentNode.replaceChild(newSaveChangesBtn, saveChangesBtn);
             apiCallModal.classList.add('hidden');
         }
     });
